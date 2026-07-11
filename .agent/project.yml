@@ -2,7 +2,10 @@ name: sdd-tdd-agent
 platform_language: python
 target_languages:
   - java
+  - typescript
+target_frameworks:
+  - angular
 development_method:
   - sdd
   - incremental-tdd
-current_session: 0004-java-test-framework-detection
+current_session: 0005-agent-status

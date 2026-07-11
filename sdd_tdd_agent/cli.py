@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
 from sdd_tdd_agent.project_init import initialize_project
+from sdd_tdd_agent.project_status import load_project_status, render_project_status
 
 
 def hello(out: TextIO) -> None:
@@ -27,6 +28,11 @@ def main(
     if arguments and arguments[0] == "init":
         initialize_project(project_root)
         output.write("Initialized .agent workspace.\n")
+        return 0
+
+    if arguments and arguments[0] == "status":
+        status = load_project_status(project_root)
+        output.write(render_project_status(status))
         return 0
 
     return 2

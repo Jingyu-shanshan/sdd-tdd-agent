@@ -32,6 +32,12 @@ metadata. Fresh workspaces also record Java/Maven projects detected by
 `build.gradle.kts`. Maven projects declaring an `org.junit.jupiter` dependency
 also record JUnit 5 as their test framework.
 
+Inspect project classification and the active development session with:
+
+```bash
+uv run agent status
+```
+
 Run the test suite with:
 
 ```bash
@@ -48,3 +54,5 @@ uv run pytest
 ```
 
 The active and completed development records live under `.agent/sessions/`.
+The multi-language delivery plan, including TypeScript and Angular SDD/TDD,
+lives in `ROADMAP.md`.

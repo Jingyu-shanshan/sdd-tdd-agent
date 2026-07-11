@@ -4,7 +4,9 @@
 
 The product is a CLI platform that coordinates a single code agent through
 multiple isolated contexts. Python implements the platform; Java is the first
-target project language supported by the MVP.
+target project language supported by the MVP. TypeScript and Angular follow
+after the core workflow is proven and reuse the same SDD artifacts, state
+machine, context isolation, and incremental TDD loop.
 
 ## Initial architecture
 
@@ -25,5 +27,7 @@ only when a failing acceptance test requires it.
 - Keep project detection read-only and separate from metadata persistence.
 - Parse valid Maven POM files with the standard library and match XML local
   names so standard namespace versions do not leak into domain rules.
+- Keep project/session status loading and deterministic text rendering outside
+  CLI dispatch. Validate session identifiers before resolving state paths.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
