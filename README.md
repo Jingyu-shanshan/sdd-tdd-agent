@@ -50,8 +50,12 @@ sets the workflow state to `ANALYSIS`, and activates the new Session.
 The requirement-analysis core provides a typed, dependency-injected
 `RequirementAnalyzer` boundary. It loads the versioned Prompt and project
 context, validates structured output, writes reviewable requirements, and stops
-at `REQUIREMENT_REVIEW`. A concrete model adapter and CLI configuration are the
-next integration step.
+at `REQUIREMENT_REVIEW`.
+
+The provider-neutral model boundary includes a JSON command adapter. It sends
+typed analysis requests through stdin, accepts strict JSON results, and executes
+already-tokenized commands without a shell. Provider/configuration wiring into
+`agent analyze` remains a separate step.
 
 Run the test suite with:
 

@@ -34,5 +34,9 @@ only when a failing acceptance test requires it.
 - Isolate requirement-analysis models behind an injected typed Protocol. Load
   versioned Prompts from packaged files, validate all structured output before
   mutation, and require human review before DESIGN.
+- Support provider-neutral model bridges through a strict JSON stdin/stdout
+  adapter and an injected process runner. Production execution must use
+  tokenized arguments with `shell=False` and redact process/request content from
+  errors.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
