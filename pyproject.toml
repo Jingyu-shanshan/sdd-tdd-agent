@@ -11,6 +11,9 @@ requires-python = ">=3.9"
 [project.scripts]
 agent = "sdd_tdd_agent.cli:main"
 
+[tool.setuptools.package-data]
+sdd_tdd_agent = ["prompts/**/*.md"]
+
 [dependency-groups]
 dev = [
     "pyright",

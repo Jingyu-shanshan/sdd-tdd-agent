@@ -47,6 +47,12 @@ uv run agent feature "Support PDF export"
 The command records the request, creates the eight standard session artifacts,
 sets the workflow state to `ANALYSIS`, and activates the new Session.
 
+The requirement-analysis core provides a typed, dependency-injected
+`RequirementAnalyzer` boundary. It loads the versioned Prompt and project
+context, validates structured output, writes reviewable requirements, and stops
+at `REQUIREMENT_REVIEW`. A concrete model adapter and CLI configuration are the
+next integration step.
+
 Run the test suite with:
 
 ```bash

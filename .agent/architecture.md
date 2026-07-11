@@ -31,5 +31,8 @@ only when a failing acceptance test requires it.
   CLI dispatch. Validate session identifiers before resolving state paths.
 - Create feature sessions exclusively with immutable typed results, pending SDD
   templates, safe generated IDs, and atomic active-session metadata updates.
+- Isolate requirement-analysis models behind an injected typed Protocol. Load
+  versioned Prompts from packaged files, validate all structured output before
+  mutation, and require human review before DESIGN.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
