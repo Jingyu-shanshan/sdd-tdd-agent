@@ -29,12 +29,22 @@ The command creates `.agent/` metadata plus the `memories`, `sessions`,
 `cache`, `logs`, and `metrics` directories. Re-running it preserves existing
 metadata. Fresh workspaces also record Java/Maven projects detected by
 `pom.xml` and Java/Gradle projects detected by `build.gradle` or
-`build.gradle.kts`.
+`build.gradle.kts`. Maven projects declaring an `org.junit.jupiter` dependency
+also record JUnit 5 as their test framework.
 
 Run the test suite with:
 
 ```bash
 uv run python -m unittest discover -v
+```
+
+Repository quality checks are defined by `AGENTS.md` and can be run with:
+
+```bash
+uv run ruff check .
+uv run ruff format --check .
+uv run pyright
+uv run pytest
 ```
 
 The active and completed development records live under `.agent/sessions/`.

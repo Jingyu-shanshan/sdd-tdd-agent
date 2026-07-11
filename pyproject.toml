@@ -10,3 +10,24 @@ requires-python = ">=3.9"
 
 [project.scripts]
 agent = "sdd_tdd_agent.cli:main"
+
+[dependency-groups]
+dev = [
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=sdd_tdd_agent --cov-report=term-missing --cov-fail-under=80"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.pyright]
+include = ["sdd_tdd_agent", "tests"]
+pythonVersion = "3.9"
+typeCheckingMode = "standard"

@@ -13,7 +13,7 @@ class MavenDetectionTest(unittest.TestCase):
 
             profile = detect_project(root)
 
-            self.assertIsNotNone(profile)
+            assert profile is not None
             self.assertEqual("java", profile.target_language)
             self.assertEqual("maven", profile.build_tool)
 
@@ -28,7 +28,7 @@ class GradleDetectionTest(unittest.TestCase):
 
                     profile = detect_project(root)
 
-                    self.assertIsNotNone(profile)
+                    assert profile is not None
                     self.assertEqual("java", profile.target_language)
                     self.assertEqual("gradle", profile.build_tool)
 

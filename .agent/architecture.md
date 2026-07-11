@@ -11,9 +11,9 @@ target project language supported by the MVP.
 The platform starts as a single Python package with a thin CLI boundary. The
 `project_init` module owns workspace filesystem changes independently of CLI
 dispatch. The side-effect-free `project_detection` module maps root-level
-project markers to a project profile. New workflow behavior will be introduced
-behind application-layer interfaces only when a failing acceptance test
-requires it.
+project markers and Maven dependency metadata to an immutable project profile.
+New workflow behavior will be introduced behind application-layer interfaces
+only when a failing acceptance test requires it.
 
 ## Decisions
 
@@ -23,5 +23,7 @@ requires it.
 - Create bootstrap metadata with exclusive first-write semantics so repeated
   initialization preserves project knowledge.
 - Keep project detection read-only and separate from metadata persistence.
+- Parse valid Maven POM files with the standard library and match XML local
+  names so standard namespace versions do not leak into domain rules.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

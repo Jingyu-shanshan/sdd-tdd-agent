@@ -1,6 +1,7 @@
 from pathlib import Path
+from typing import Optional
 
-from sdd_tdd_agent.project_detection import detect_project
+from sdd_tdd_agent.project_detection import ProjectProfile, detect_project
 
 
 WORKSPACE_DIRECTORIES = ("memories", "sessions", "cache", "logs", "metrics")
@@ -23,6 +24,31 @@ Record the project's coding and testing conventions here.
 """
 
 
+def _render_project_metadata(root: Path, profile: Optional[ProjectProfile]) -> str:
+    metadata = f"name: {root.name}\n"
+    if profile is None:
+        return metadata
+
+    metadata += (
+        f"target_language: {profile.target_language}\n"
+        f"build_tool: {profile.build_tool}\n"
+    )
+    if profile.test_frameworks:
+        metadata += "test_frameworks:\n"
+        metadata += "".join(
+            f"  - {framework}\n" for framework in profile.test_frameworks
+        )
+    return metadata
+
+
+def _write_once(path: Path, content: str) -> None:
+    try:
+        with path.open("x", encoding="utf-8") as file:
+            file.write(content)
+    except FileExistsError:
+        return
+
+
 def initialize_project(root: Path) -> None:
     """Create the standard agent workspace directories below a project root."""
     workspace = root / ".agent"
@@ -30,23 +56,12 @@ def initialize_project(root: Path) -> None:
     for directory in WORKSPACE_DIRECTORIES:
         (workspace / directory).mkdir(exist_ok=True)
 
-    project_metadata = f"name: {root.name}\n"
     profile = detect_project(root)
-    if profile is not None:
-        project_metadata += (
-            f"target_language: {profile.target_language}\n"
-            f"build_tool: {profile.build_tool}\n"
-        )
-
     metadata = {
         "config.yml": CONFIG,
-        "project.yml": project_metadata,
+        "project.yml": _render_project_metadata(root, profile),
         "architecture.md": ARCHITECTURE,
         "conventions.md": CONVENTIONS,
     }
     for filename, content in metadata.items():
-        try:
-            with (workspace / filename).open("x", encoding="utf-8") as file:
-                file.write(content)
-        except FileExistsError:
-            pass
+        _write_once(workspace / filename, content)

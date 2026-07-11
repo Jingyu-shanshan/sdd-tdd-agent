@@ -5,4 +5,4 @@ target_languages:
 development_method:
   - sdd
   - incremental-tdd
-current_session: 0003-java-project-detection
+current_session: 0004-java-test-framework-detection
