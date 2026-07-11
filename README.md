@@ -27,7 +27,9 @@ uv run agent init
 
 The command creates `.agent/` metadata plus the `memories`, `sessions`,
 `cache`, `logs`, and `metrics` directories. Re-running it preserves existing
-metadata.
+metadata. Fresh workspaces also record Java/Maven projects detected by
+`pom.xml` and Java/Gradle projects detected by `build.gradle` or
+`build.gradle.kts`.
 
 Run the test suite with:
 

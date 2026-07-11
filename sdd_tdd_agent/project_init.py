@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from sdd_tdd_agent.project_detection import detect_project
+
 
 WORKSPACE_DIRECTORIES = ("memories", "sessions", "cache", "logs", "metrics")
 
@@ -28,9 +30,17 @@ def initialize_project(root: Path) -> None:
     for directory in WORKSPACE_DIRECTORIES:
         (workspace / directory).mkdir(exist_ok=True)
 
+    project_metadata = f"name: {root.name}\n"
+    profile = detect_project(root)
+    if profile is not None:
+        project_metadata += (
+            f"target_language: {profile.target_language}\n"
+            f"build_tool: {profile.build_tool}\n"
+        )
+
     metadata = {
         "config.yml": CONFIG,
-        "project.yml": f"name: {root.name}\n",
+        "project.yml": project_metadata,
         "architecture.md": ARCHITECTURE,
         "conventions.md": CONVENTIONS,
     }

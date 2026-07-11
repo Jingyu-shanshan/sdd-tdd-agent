@@ -44,6 +44,25 @@ class InitializeProjectMetadataTest(unittest.TestCase):
                 (workspace / "project.yml").read_text(encoding="utf-8"),
             )
 
+    def test_records_detected_java_build_tool(self) -> None:
+        for marker, build_tool in (
+            ("pom.xml", "maven"),
+            ("build.gradle", "gradle"),
+            ("build.gradle.kts", "gradle"),
+        ):
+            with self.subTest(marker=marker):
+                with tempfile.TemporaryDirectory() as directory:
+                    root = Path(directory)
+                    (root / marker).touch()
+
+                    initialize_project(root)
+
+                    project_metadata = (root / ".agent" / "project.yml").read_text(
+                        encoding="utf-8"
+                    )
+                    self.assertIn("target_language: java\n", project_metadata)
+                    self.assertIn(f"build_tool: {build_tool}\n", project_metadata)
+
 
 class ReinitializeProjectTest(unittest.TestCase):
     def test_preserves_existing_metadata(self) -> None:
