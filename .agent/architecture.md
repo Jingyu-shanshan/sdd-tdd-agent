@@ -8,8 +8,9 @@ target project language supported by the MVP.
 
 ## Initial architecture
 
-The first increment is deliberately a single Python package with a thin CLI
-boundary. New workflow behavior will be introduced behind application-layer
+The platform starts as a single Python package with a thin CLI boundary. The
+`project_init` module owns workspace filesystem changes independently of CLI
+dispatch. New workflow behavior will be introduced behind application-layer
 interfaces only when a failing acceptance test requires it.
 
 ## Decisions
@@ -17,6 +18,7 @@ interfaces only when a failing acceptance test requires it.
 - Use the Python standard library for the bootstrap increment.
 - Expose the executable as `agent` and the module as `sdd_tdd_agent`.
 - Keep CLI parsing separate from command behavior so output can be unit tested.
+- Create bootstrap metadata with exclusive first-write semantics so repeated
+  initialization preserves project knowledge.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
-

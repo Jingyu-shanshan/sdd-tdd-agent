@@ -1,9 +1,11 @@
 import io
 import subprocess
 import sys
+import tempfile
 import unittest
+from pathlib import Path
 
-from sdd_tdd_agent.cli import hello
+from sdd_tdd_agent.cli import hello, main
 
 
 class HelloCommandTest(unittest.TestCase):
@@ -26,6 +28,19 @@ class ModuleCommandTest(unittest.TestCase):
 
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual("Hello, World!\n", result.stdout)
+
+
+class InitCommandTest(unittest.TestCase):
+    def test_initializes_selected_project(self) -> None:
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+
+            exit_code = main(["init"], output, root)
+
+            self.assertEqual(0, exit_code)
+            self.assertEqual("Initialized .agent workspace.\n", output.getvalue())
+            self.assertTrue((root / ".agent" / "project.yml").is_file())
 
 
 if __name__ == "__main__":

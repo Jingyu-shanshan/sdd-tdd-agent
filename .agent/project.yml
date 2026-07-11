@@ -5,5 +5,4 @@ target_languages:
 development_method:
   - sdd
   - incremental-tdd
-current_session: 0001-hello-world
-
+current_session: 0002-agent-init

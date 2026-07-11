@@ -1,5 +1,8 @@
 import sys
+from pathlib import Path
 from typing import Optional, Sequence, TextIO
+
+from sdd_tdd_agent.project_init import initialize_project
 
 
 def hello(out: TextIO) -> None:
@@ -10,13 +13,20 @@ def hello(out: TextIO) -> None:
 def main(
     argv: Optional[Sequence[str]] = None,
     out: Optional[TextIO] = None,
+    root: Optional[Path] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
     output = sys.stdout if out is None else out
+    project_root = Path.cwd() if root is None else root
 
     if arguments and arguments[0] == "hello":
         hello(output)
+        return 0
+
+    if arguments and arguments[0] == "init":
+        initialize_project(project_root)
+        output.write("Initialized .agent workspace.\n")
         return 0
 
     return 2

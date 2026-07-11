@@ -6,8 +6,8 @@ contexts.
 
 ## Current increment
 
-The bootstrap slice provides a working Hello World command while establishing
-the project's specification and TDD record structure.
+The first two slices provide a working CLI and project-workspace
+initialization while establishing the specification and TDD record structure.
 
 ```bash
 uv run agent hello
@@ -18,6 +18,16 @@ Expected output:
 ```text
 Hello, World!
 ```
+
+Initialize the current project's agent workspace with:
+
+```bash
+uv run agent init
+```
+
+The command creates `.agent/` metadata plus the `memories`, `sessions`,
+`cache`, `logs`, and `metrics` directories. Re-running it preserves existing
+metadata.
 
 Run the test suite with:
 
