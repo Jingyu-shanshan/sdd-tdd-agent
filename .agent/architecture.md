@@ -1,0 +1,22 @@
+# Architecture
+
+## Context
+
+The product is a CLI platform that coordinates a single code agent through
+multiple isolated contexts. Python implements the platform; Java is the first
+target project language supported by the MVP.
+
+## Initial architecture
+
+The first increment is deliberately a single Python package with a thin CLI
+boundary. New workflow behavior will be introduced behind application-layer
+interfaces only when a failing acceptance test requires it.
+
+## Decisions
+
+- Use the Python standard library for the bootstrap increment.
+- Expose the executable as `agent` and the module as `sdd_tdd_agent`.
+- Keep CLI parsing separate from command behavior so output can be unit tested.
+- Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
+  concrete behavior needs them and a human approves the dependency.
+
