@@ -38,6 +38,15 @@ Inspect project classification and the active development session with:
 uv run agent status
 ```
 
+Start a feature SDD session with:
+
+```bash
+uv run agent feature "Support PDF export"
+```
+
+The command records the request, creates the eight standard session artifacts,
+sets the workflow state to `ANALYSIS`, and activates the new Session.
+
 Run the test suite with:
 
 ```bash

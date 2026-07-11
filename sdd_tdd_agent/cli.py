@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
+from sdd_tdd_agent.feature_session import create_feature_session
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
 
@@ -33,6 +34,12 @@ def main(
     if arguments and arguments[0] == "status":
         status = load_project_status(project_root)
         output.write(render_project_status(status))
+        return 0
+
+    if arguments and arguments[0] == "feature":
+        description = " ".join(arguments[1:])
+        session = create_feature_session(project_root, description)
+        output.write(f"Created feature session: {session.session_id}\n")
         return 0
 
     return 2

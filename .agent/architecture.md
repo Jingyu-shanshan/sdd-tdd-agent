@@ -29,5 +29,7 @@ only when a failing acceptance test requires it.
   names so standard namespace versions do not leak into domain rules.
 - Keep project/session status loading and deterministic text rendering outside
   CLI dispatch. Validate session identifiers before resolving state paths.
+- Create feature sessions exclusively with immutable typed results, pending SDD
+  templates, safe generated IDs, and atomic active-session metadata updates.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
