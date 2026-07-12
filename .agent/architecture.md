@@ -38,5 +38,9 @@ only when a failing acceptance test requires it.
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
   errors.
+- Compose `agent analyze` from strict tracked configuration, active Session
+  resolution, the JSON adapter, and the analysis workflow. Require JSON-string
+  command tokens and an explicit finite timeout; never infer executable or
+  credentials from hidden state.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

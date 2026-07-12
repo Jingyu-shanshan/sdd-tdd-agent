@@ -55,7 +55,23 @@ at `REQUIREMENT_REVIEW`.
 The provider-neutral model boundary includes a JSON command adapter. It sends
 typed analysis requests through stdin, accepts strict JSON results, and executes
 already-tokenized commands without a shell. Provider/configuration wiring into
-`agent analyze` remains a separate step.
+`agent analyze` uses tracked project configuration:
+
+```yaml
+requirement_analyzer_command:
+  - "model-bridge"
+  - "analyze"
+requirement_analyzer_timeout_seconds: 45
+```
+
+Each command token must be a JSON string. Do not store credentials in this
+file. After configuring a compatible JSON bridge, analyze the active Session:
+
+```bash
+uv run agent analyze
+```
+
+Successful analysis stops at `REQUIREMENT_REVIEW` for human confirmation.
 
 Run the test suite with:
 

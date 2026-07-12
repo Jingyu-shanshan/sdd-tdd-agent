@@ -32,8 +32,13 @@ class CommandAnalyzerConfig:
     timeout_seconds: float
 
     def __post_init__(self) -> None:
-        if not self.command or any(not argument for argument in self.command):
+        if not self.command or any(
+            not isinstance(argument, str) or not argument.strip()
+            for argument in self.command
+        ):
             raise ValueError("Analyzer command must contain non-empty arguments")
+        if any("\x00" in argument for argument in self.command):
+            raise ValueError("Analyzer command arguments must not contain null bytes")
         if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
             raise ValueError("Analyzer timeout must be a positive finite number")
 
