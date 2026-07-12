@@ -52,26 +52,32 @@ The requirement-analysis core provides a typed, dependency-injected
 context, validates structured output, writes reviewable requirements, and stops
 at `REQUIREMENT_REVIEW`.
 
-The provider-neutral model boundary includes a JSON command adapter. It sends
-typed analysis requests through stdin, accepts strict JSON results, and executes
-already-tokenized commands without a shell. Provider/configuration wiring into
-`agent analyze` uses tracked project configuration:
+The model boundary sends typed analysis requests through stdin, accepts strict
+JSON results, and executes already-tokenized commands without a shell. The
+repository is configured for the built-in Codex CLI protocol:
 
 ```yaml
+requirement_analyzer_protocol: codex-exec
 requirement_analyzer_command:
-  - "model-bridge"
-  - "analyze"
-requirement_analyzer_timeout_seconds: 45
+  - "codex"
+requirement_analyzer_timeout_seconds: 300
 ```
 
-Each command token must be a JSON string. Do not store credentials in this
-file. After configuring a compatible JSON bridge, analyze the active Session:
+The Codex executable must already be authenticated. The bridge resolves `codex`
+from `PATH`; on macOS it also supports the executable bundled with the ChatGPT
+application when a terminal does not inherit the app's PATH. Custom executable
+names are never redirected. The bridge runs `codex exec` ephemerally with a
+read-only sandbox and strict output Schema; it does not override the user's
+model selection or store credentials in project configuration. Analyze the
+active Session with:
 
 ```bash
 uv run agent analyze
 ```
 
 Successful analysis stops at `REQUIREMENT_REVIEW` for human confirmation.
+For another provider, omit the protocol or set it to `json-command` and supply a
+compatible JSON stdin/stdout command. Every command token must be a JSON string.
 
 Run the test suite with:
 

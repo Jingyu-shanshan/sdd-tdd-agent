@@ -42,5 +42,12 @@ only when a failing acceptance test requires it.
   resolution, the JSON adapter, and the analysis workflow. Require JSON-string
   command tokens and an explicit finite timeout; never infer executable or
   credentials from hidden state.
+- Integrate Codex through an explicit `codex-exec` protocol on the same typed
+  adapter boundary. Use the configured executable and timeout, ephemeral
+  read-only execution, a strict output Schema, and operating-system temporary
+  exchange files. Preserve `json-command` as the provider-neutral default.
+- Resolve the standard `codex` command from PATH first. On macOS only, fall back
+  to the executable bundled with the installed ChatGPT application when PATH
+  lookup fails; keep custom executable names untouched.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

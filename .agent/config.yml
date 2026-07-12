@@ -4,6 +4,7 @@ max_test_failures: 5
 max_refactor_iterations: 3
 max_duration_minutes: 30
 
-# `agent analyze` also requires these tracked settings:
-# requirement_analyzer_command: a block list of JSON string command tokens
-# requirement_analyzer_timeout_seconds: a positive finite number
+requirement_analyzer_protocol: codex-exec
+requirement_analyzer_command:
+  - "codex"
+requirement_analyzer_timeout_seconds: 300

@@ -1,8 +1,12 @@
 import json
 import math
+import os
+import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
-from typing import Dict, Protocol, Tuple
+from pathlib import Path
+from typing import Callable, Dict, Optional, Protocol, Tuple
 
 from sdd_tdd_agent.requirement_analysis import (
     RequirementAnalysis,
@@ -19,6 +23,35 @@ ANALYSIS_KEYS = {
     "open_questions",
 }
 
+ANALYSIS_SCHEMA: Dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "summary": {"type": "string"},
+        "user_stories": {"type": "array", "items": {"type": "string"}},
+        "functional_requirements": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+        "non_functional_requirements": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+        "impact_analysis": {"type": "array", "items": {"type": "string"}},
+        "open_questions": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": [
+        "summary",
+        "user_stories",
+        "functional_requirements",
+        "non_functional_requirements",
+        "impact_analysis",
+        "open_questions",
+    ],
+    "additionalProperties": False,
+}
+
+CODEX_FALLBACK_PATHS = (Path("/Applications/ChatGPT.app/Contents/Resources/codex"),)
+
 
 class RequirementAnalyzerError(RuntimeError):
     """Safe public error raised by a requirement analyzer adapter."""
@@ -30,6 +63,7 @@ class CommandAnalyzerConfig:
 
     command: Tuple[str, ...]
     timeout_seconds: float
+    protocol: str = "json-command"
 
     def __post_init__(self) -> None:
         if not self.command or any(
@@ -41,6 +75,8 @@ class CommandAnalyzerConfig:
             raise ValueError("Analyzer command arguments must not contain null bytes")
         if not math.isfinite(self.timeout_seconds) or self.timeout_seconds <= 0:
             raise ValueError("Analyzer timeout must be a positive finite number")
+        if self.protocol not in {"json-command", "codex-exec"}:
+            raise ValueError("Analyzer protocol is invalid")
 
 
 @dataclass(frozen=True)
@@ -63,6 +99,31 @@ class ProcessRunner(Protocol):
     ) -> ProcessResult:
         """Execute one already-tokenized command without a shell."""
         ...
+
+
+class CodexCommandResolver(Protocol):
+    """Typed boundary for resolving the configured Codex executable."""
+
+    def resolve(self, executable: str) -> str:
+        """Resolve one configured executable without mutating the environment."""
+        ...
+
+
+@dataclass(frozen=True)
+class SystemCodexCommandResolver:
+    """Resolve Codex from PATH or a verified platform installation path."""
+
+    path_lookup: Callable[[str], Optional[str]] = shutil.which
+    fallback_paths: Tuple[Path, ...] = CODEX_FALLBACK_PATHS
+
+    def resolve(self, executable: str) -> str:
+        """Preserve PATH commands and fall back only for the standard name."""
+        if self.path_lookup(executable) is not None or executable != "codex":
+            return executable
+        for candidate in self.fallback_paths:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return str(candidate)
+        return executable
 
 
 class SubprocessRunner:
@@ -165,3 +226,66 @@ class JsonCommandRequirementAnalyzer:
                 f"Analyzer command failed with exit code {result.returncode}"
             )
         return _decode_analysis(result.stdout)
+
+
+class CodexExecRequirementAnalyzer:
+    """Requirement analyzer backed by an ephemeral read-only Codex CLI run."""
+
+    def __init__(
+        self,
+        config: CommandAnalyzerConfig,
+        runner: ProcessRunner,
+        workspace: Path,
+        command_resolver: Optional[CodexCommandResolver] = None,
+    ) -> None:
+        if len(config.command) != 1:
+            raise ValueError("Codex analyzer command must contain one executable")
+        self._config = config
+        self._runner = runner
+        self._workspace = workspace
+        resolver = command_resolver or SystemCodexCommandResolver()
+        self._executable = resolver.resolve(config.command[0])
+
+    def analyze(self, request: RequirementAnalysisRequest) -> RequirementAnalysis:
+        """Exchange one analysis request through a structured Codex exec run."""
+        stdin = json.dumps(_request_payload(request), ensure_ascii=False)
+        try:
+            with tempfile.TemporaryDirectory(prefix="sdd-tdd-codex-") as directory:
+                exchange = Path(directory)
+                schema_path = exchange / "requirement-analysis.schema.json"
+                output_path = exchange / "requirement-analysis.json"
+                schema_path.write_text(
+                    json.dumps(ANALYSIS_SCHEMA),
+                    encoding="utf-8",
+                )
+                result = self._runner.run(
+                    self._command(schema_path, output_path),
+                    stdin,
+                    self._config.timeout_seconds,
+                )
+                if result.returncode != 0:
+                    raise RequirementAnalyzerError(
+                        f"Codex command failed with exit code {result.returncode}"
+                    )
+                return _decode_analysis(output_path.read_text(encoding="utf-8"))
+        except OSError as error:
+            raise RequirementAnalyzerError(
+                "Codex analyzer output could not be read"
+            ) from error
+
+    def _command(self, schema_path: Path, output_path: Path) -> Tuple[str, ...]:
+        return (self._executable,) + (
+            "exec",
+            "--ephemeral",
+            "--sandbox",
+            "read-only",
+            "--color",
+            "never",
+            "--output-schema",
+            str(schema_path),
+            "--output-last-message",
+            str(output_path),
+            "--cd",
+            str(self._workspace),
+            "-",
+        )

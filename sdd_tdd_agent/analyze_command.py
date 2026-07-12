@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from sdd_tdd_agent.model_adapter import (
+    CodexExecRequirementAnalyzer,
     CommandAnalyzerConfig,
     JsonCommandRequirementAnalyzer,
     ProcessRunner,
@@ -16,6 +17,8 @@ from sdd_tdd_agent.requirement_analysis import (
 
 COMMAND_KEY = "requirement_analyzer_command"
 TIMEOUT_KEY = "requirement_analyzer_timeout_seconds"
+PROTOCOL_KEY = "requirement_analyzer_protocol"
+SUPPORTED_PROTOCOLS = {"json-command", "codex-exec"}
 
 
 class AnalyzerConfigurationError(ValueError):
@@ -47,7 +50,9 @@ def load_analyzer_config(root: Path) -> CommandAnalyzerConfig:
     timeout: Optional[float] = None
     has_command = False
     has_timeout = False
+    has_protocol = False
     in_command = False
+    protocol = "json-command"
 
     for line in path.read_text(encoding="utf-8").splitlines():
         value = line.strip()
@@ -71,6 +76,16 @@ def load_analyzer_config(root: Path) -> CommandAnalyzerConfig:
                     raise AnalyzerConfigurationError(
                         "Invalid analyzer timeout config"
                     ) from error
+            elif key == PROTOCOL_KEY:
+                selected_protocol = scalar.strip()
+                if (
+                    has_protocol
+                    or not separator
+                    or selected_protocol not in SUPPORTED_PROTOCOLS
+                ):
+                    raise AnalyzerConfigurationError("Invalid analyzer protocol config")
+                has_protocol = True
+                protocol = selected_protocol
             continue
         if in_command and value.startswith("- "):
             command.append(_decode_command_item(value[2:].strip()))
@@ -83,8 +98,12 @@ def load_analyzer_config(root: Path) -> CommandAnalyzerConfig:
             "requirement_analyzer_command and requirement_analyzer_timeout_seconds "
             "to .agent/config.yml"
         )
+    if protocol == "codex-exec" and len(command) != 1:
+        raise AnalyzerConfigurationError(
+            "Codex analyzer command must contain one executable"
+        )
     try:
-        return CommandAnalyzerConfig(tuple(command), timeout)
+        return CommandAnalyzerConfig(tuple(command), timeout, protocol)
     except ValueError as error:
         raise AnalyzerConfigurationError("Analyzer configuration is invalid") from error
 
@@ -98,5 +117,12 @@ def analyze_active_requirement(
     if status.current_session is None:
         raise ActiveSessionError("Project has no active Session")
     config = load_analyzer_config(root)
-    analyzer = JsonCommandRequirementAnalyzer(config=config, runner=runner)
+    if config.protocol == "codex-exec":
+        analyzer = CodexExecRequirementAnalyzer(
+            config=config,
+            runner=runner,
+            workspace=root,
+        )
+    else:
+        analyzer = JsonCommandRequirementAnalyzer(config=config, runner=runner)
     return run_requirement_analysis(root, status.current_session, analyzer)
