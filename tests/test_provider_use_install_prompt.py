@@ -105,7 +105,11 @@ def test_should_install_verify_and_select_after_confirmation(tmp_path: Path) -> 
         "Selected provider: codex\n"
     )
     assert error == ""
-    assert [command[0] for command in runner.commands] == ["curl", "sh", "/home/user/.local/bin/codex"]
+    assert [command[0] for command in runner.commands] == [
+        "curl",
+        "sh",
+        "/home/user/.local/bin/codex",
+    ]
     assert "requirement_analyzer_protocol: codex-exec" in config_path.read_text(
         encoding="utf-8"
     )

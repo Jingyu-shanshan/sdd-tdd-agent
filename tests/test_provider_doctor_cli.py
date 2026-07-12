@@ -55,9 +55,12 @@ requirement_analyzer_timeout_seconds: 45
 
     assert exit_code == 0
     assert runner.timeout_seconds == 45
-    assert output.getvalue() == """\
+    assert (
+        output.getvalue()
+        == """\
 Provider: codex
 Adapter status: adapter-ready
 CLI status: installed
 Version: codex-cli 1.2.3
 """
+    )

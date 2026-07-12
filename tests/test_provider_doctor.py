@@ -43,12 +43,15 @@ def test_should_report_installed_provider_version() -> None:
     assert runner.command == ("/usr/local/bin/codex", "--version")
     assert diagnostic.cli_status == "installed"
     assert diagnostic.version == "codex-cli 1.2.3"
-    assert render_provider_diagnostic(diagnostic) == """\
+    assert (
+        render_provider_diagnostic(diagnostic)
+        == """\
 Provider: codex
 Adapter status: adapter-ready
 CLI status: installed
 Version: codex-cli 1.2.3
 """
+    )
 
 
 def test_should_report_missing_provider_without_running_version() -> None:

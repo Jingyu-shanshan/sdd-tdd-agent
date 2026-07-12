@@ -77,5 +77,6 @@ before prompt/download; the Installer revalidates this boundary.
 - `.gitignore` needs no new pattern.
 - The active product Session remains at `REQUIREMENT_REVIEW`.
 
-Final `ruff format --check` awaits human review because four new test files need
-mechanical formatting and repository rules prohibit modifying existing tests.
+The user explicitly authorized mechanical Ruff formatting of the three affected
+new test files. No assertion or test behavior changed. Final formatting, lint,
+Pyright, and all 109 tests pass.
