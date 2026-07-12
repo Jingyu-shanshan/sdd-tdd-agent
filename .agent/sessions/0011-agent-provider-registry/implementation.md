@@ -55,5 +55,12 @@ list/status commands report Codex selected without executing it. The active
 support-PDF Session was observed at `REQUIREMENT_REVIEW` and remains untouched
 by Provider operations.
 
-Final formatting and zero-warning Pyright verification await authorization for
-mechanical changes to the three new test files, including one raw-string fix.
+The user authorized mechanical formatting of the three new test files and one
+raw-string correction that did not alter assertion semantics. Final Ruff and
+Pyright checks now pass with zero errors or warnings. All 87 tests still pass
+with 95.71% coverage; Python 3.9 compilation and source/wheel builds pass.
+
+All 12 Session state files are valid JSON without duplicate keys. The existing
+`.agent/**/*.tmp`, build, coverage, and cache rules cover every generated
+artifact, so `.gitignore` needs no change. The active support-PDF Session remains
+at the externally established `REQUIREMENT_REVIEW` state.

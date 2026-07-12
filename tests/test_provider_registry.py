@@ -16,10 +16,13 @@ def test_should_list_ready_and_planned_agent_providers() -> None:
     assert all(provider.status == "planned" for provider in providers[2:])
     assert "linux-mint" in providers[0].platforms
 
-    assert render_provider_list(providers) == """\
+    assert (
+        render_provider_list(providers)
+        == """\
 codex: adapter-ready (macos, linux-mint) - OpenAI Codex CLI
 custom-json: adapter-ready (macos, linux-mint) - Custom JSON command
 claude-code: planned (platform contract pending) - Claude Code
 cursor: planned (platform contract pending) - Cursor
 copilot: planned (platform contract pending) - GitHub Copilot
 """
+    )

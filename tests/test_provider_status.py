@@ -31,12 +31,15 @@ def test_should_load_and_render_selected_provider(tmp_path: Path) -> None:
     assert selection.provider_key == "codex"
     assert selection.protocol == "codex-exec"
     assert selection.timeout_seconds == 300
-    assert render_provider_status(selection) == """\
+    assert (
+        render_provider_status(selection)
+        == """\
 Selected provider: codex
 Adapter status: adapter-ready
 Protocol: codex-exec
 Timeout seconds: 300
 """
+    )
 
 
 def test_should_list_providers_through_cli(tmp_path: Path) -> None:
@@ -56,9 +59,12 @@ def test_should_report_selected_provider_through_cli(tmp_path: Path) -> None:
     exit_code = main(["provider", "status"], out=output, root=tmp_path)
 
     assert exit_code == 0
-    assert output.getvalue() == """\
+    assert (
+        output.getvalue()
+        == """\
 Selected provider: codex
 Adapter status: adapter-ready
 Protocol: codex-exec
 Timeout seconds: 300
 """
+    )

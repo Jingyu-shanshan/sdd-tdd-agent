@@ -53,7 +53,9 @@ def test_should_atomically_select_codex_and_preserve_other_config(
 
     assert selection.provider_key == "codex"
     assert selection.timeout_seconds == 45
-    assert config_path.read_text(encoding="utf-8") == """\
+    assert (
+        config_path.read_text(encoding="utf-8")
+        == """\
 max_iterations: 20
 # Preserve this project setting.
 requirement_analyzer_protocol: codex-exec
@@ -61,6 +63,7 @@ requirement_analyzer_command:
   - "codex"
 requirement_analyzer_timeout_seconds: 45
 """
+    )
     assert not (config_path.parent / ".config.yml.provider.tmp").exists()
 
 
@@ -68,7 +71,7 @@ requirement_analyzer_timeout_seconds: 45
     ("provider_key", "message"),
     [
         ("unknown", "Unknown provider: unknown"),
-        ("claude-code", "Provider is not selectable: claude-code \(planned\)"),
+        ("claude-code", r"Provider is not selectable: claude-code \(planned\)"),
         (
             "custom-json",
             "Provider requires explicit command configuration: custom-json",

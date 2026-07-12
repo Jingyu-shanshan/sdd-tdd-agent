@@ -18,8 +18,8 @@ Status: complete
 
 ## Task 3: Review
 
-Status: pending
+Status: complete
 
-1. [ ] Update README and review `.gitignore`.
-2. [ ] Run Ruff, Pyright, pytest, coverage, build, and Python 3.9 checks.
-3. [ ] Validate all Session JSON files and active Session preservation.
+1. [x] Update README and review `.gitignore`.
+2. [x] Run Ruff, Pyright, pytest, coverage, build, and Python 3.9 checks.
+3. [x] Validate all Session JSON files and active Session preservation.
