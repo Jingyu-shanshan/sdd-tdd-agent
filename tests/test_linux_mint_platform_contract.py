@@ -27,7 +27,9 @@ def test_should_report_linux_mint_as_ready_supported_target() -> None:
     assert diagnostic.python_status == "supported"
     assert diagnostic.temporary_directory_status == "available"
     assert diagnostic.readiness == "ready"
-    assert render_platform_diagnostic(diagnostic) == """\
+    assert (
+        render_platform_diagnostic(diagnostic)
+        == """\
 Operating system: linux
 Distribution: linuxmint 22.1
 Platform support: supported-target
@@ -35,3 +37,4 @@ Python: 3.12.4 (supported)
 Temporary directory: available
 Readiness: ready
 """
+    )

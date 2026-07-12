@@ -68,5 +68,6 @@ the command and formal Linux Mint classification.
 - All 14 Session JSON files are valid without duplicate keys.
 - `.gitignore` needs no update and active Session stays `REQUIREMENT_REVIEW`.
 
-Final `ruff format --check` awaits human review because one new test file needs
-mechanical formatting and repository rules prohibit modifying existing tests.
+The user explicitly authorized mechanical Ruff formatting of the one affected
+new test file. No assertion or test behavior changed. Final formatting, lint,
+Pyright, and all 127 tests pass.
