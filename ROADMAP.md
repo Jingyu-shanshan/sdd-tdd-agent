@@ -35,6 +35,10 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 - Treat Linux Mint as a formally tested target rather than relying on assumed
   Python portability.
+- Add `agent platform doctor` using the standard `os-release` contract to
+  distinguish Linux Mint from compatible-but-untested Linux distributions.
+- Diagnose Python version and private temporary-directory readiness without
+  changing the host environment.
 - Resolve provider executables from PATH or explicit configuration without
   silently installing tools or changing environment variables.
 - Test Python 3.9, 3.10, and 3.12; Bash and Zsh; executable permissions;

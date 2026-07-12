@@ -57,6 +57,11 @@ only when a failing acceptance test requires it.
   injected resolvers, prefer PATH or explicit configuration, and validate
   subprocess, permission, temporary-file, signal, and toolchain behavior in a
   Linux CI matrix.
+- Model host detection as an injected read-only Platform Environment. On Linux,
+  parse only standard `os-release` identifiers, reject malformed/duplicate
+  fields, and classify `ID=linuxmint` as the formal target while reporting other
+  Linux distributions as compatible but untested. Diagnose Python and temporary
+  directory readiness independently from platform identity.
 - Diagnose and install provider CLIs behind typed, injected locator and process
   boundaries. Installation is allowed only for adapter-ready providers with a
   verified official plan and explicit interactive confirmation. Download and

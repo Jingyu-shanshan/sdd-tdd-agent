@@ -121,6 +121,20 @@ through a formal Python, shell, subprocess, permission, timeout, Java, and
 TypeScript toolchain matrix described in `ROADMAP.md`; the CLI will not silently
 install provider tools or mutate PATH.
 
+Inspect host identity and minimum runtime readiness without changing the project:
+
+```bash
+uv run agent platform doctor
+```
+
+On Linux, the Doctor follows the standard
+[`os-release` contract](https://www.freedesktop.org/software/systemd/man/latest/os-release.html)
+and recognizes only `ID=linuxmint` as the formally supported Linux Mint target.
+Other Linux distributions report `compatible-untested`; they are not mislabeled
+as Linux Mint. Python must be at least 3.9, and private temporary storage is
+probed with automatic cleanup. macOS remains supported, while unsupported
+systems and degraded runtime capabilities are reported explicitly.
+
 Run the test suite with:
 
 ```bash

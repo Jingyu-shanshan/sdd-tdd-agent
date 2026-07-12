@@ -13,6 +13,11 @@ from sdd_tdd_agent.model_adapter import (
     SubprocessRunner,
     SystemCodexCommandResolver,
 )
+from sdd_tdd_agent.platform_contract import (
+    PlatformDoctor,
+    SystemPlatformEnvironment,
+    render_platform_diagnostic,
+)
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
 from sdd_tdd_agent.provider_registry import (
@@ -146,6 +151,15 @@ def main(
             error_output.write("Error: Provider selection did not complete\n")
             return 2
         output.write(f"Selected provider: {result.selection.provider_key}\n")
+        return 0
+
+    if arguments == ["platform", "doctor"]:
+        try:
+            diagnostic = PlatformDoctor(SystemPlatformEnvironment()).diagnose()
+        except ValueError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_platform_diagnostic(diagnostic))
         return 0
 
     return 2
