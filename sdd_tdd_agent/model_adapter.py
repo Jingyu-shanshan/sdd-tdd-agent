@@ -116,14 +116,23 @@ class SystemCodexCommandResolver:
     path_lookup: Callable[[str], Optional[str]] = shutil.which
     fallback_paths: Tuple[Path, ...] = CODEX_FALLBACK_PATHS
 
+    def locate(self, executable: str) -> Optional[str]:
+        """Locate an executable from PATH or the standard Codex app bundle."""
+        located = self.path_lookup(executable)
+        if located is not None:
+            return located
+        if executable != "codex":
+            return None
+        for candidate in self.fallback_paths:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return str(candidate)
+        return None
+
     def resolve(self, executable: str) -> str:
         """Preserve PATH commands and fall back only for the standard name."""
         if self.path_lookup(executable) is not None or executable != "codex":
             return executable
-        for candidate in self.fallback_paths:
-            if candidate.is_file() and os.access(candidate, os.X_OK):
-                return str(candidate)
-        return executable
+        return self.locate(executable) or executable
 
 
 class SubprocessRunner:

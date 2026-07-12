@@ -2,12 +2,16 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
-from sdd_tdd_agent.analyze_command import analyze_active_requirement
+from sdd_tdd_agent.analyze_command import (
+    analyze_active_requirement,
+    load_analyzer_config,
+)
 from sdd_tdd_agent.feature_session import create_feature_session
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
     SubprocessRunner,
+    SystemCodexCommandResolver,
 )
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
@@ -16,7 +20,13 @@ from sdd_tdd_agent.provider_registry import (
     load_provider_selection,
     render_provider_list,
     render_provider_status,
-    select_provider,
+)
+from sdd_tdd_agent.provider_tools import (
+    ProviderCommandDependencies,
+    ProviderDoctor,
+    ProviderInstallError,
+    render_provider_diagnostic,
+    use_provider,
 )
 
 
@@ -31,6 +41,7 @@ def main(
     root: Optional[Path] = None,
     runner: Optional[ProcessRunner] = None,
     err: Optional[TextIO] = None,
+    provider_dependencies: Optional[ProviderCommandDependencies] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -84,13 +95,57 @@ def main(
         output.write(render_provider_status(selection))
         return 0
 
-    if len(arguments) == 3 and arguments[0:2] == ["provider", "use"]:
+    if len(arguments) in {2, 3} and arguments[0:2] == ["provider", "doctor"]:
         try:
-            selection = select_provider(project_root, arguments[2])
-        except ValueError as error:
+            config = load_analyzer_config(project_root)
+            provider_key = (
+                arguments[2]
+                if len(arguments) == 3
+                else load_provider_selection(project_root).provider_key
+            )
+            dependencies = provider_dependencies or ProviderCommandDependencies(
+                input=sys.stdin,
+                runner=runner or SubprocessRunner(),
+                locator=SystemCodexCommandResolver(),
+            )
+            diagnostic = ProviderDoctor(
+                runner=dependencies.runner,
+                locator=dependencies.locator,
+                timeout_seconds=config.timeout_seconds,
+            ).diagnose(provider_key)
+        except (ValueError, RequirementAnalyzerError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
-        output.write(f"Selected provider: {selection.provider_key}\n")
+        output.write(render_provider_diagnostic(diagnostic))
+        return 0
+
+    if len(arguments) == 3 and arguments[0:2] == ["provider", "use"]:
+        try:
+            dependencies = provider_dependencies or ProviderCommandDependencies(
+                input=sys.stdin,
+                runner=runner or SubprocessRunner(),
+                locator=SystemCodexCommandResolver(),
+            )
+            result = use_provider(
+                project_root,
+                arguments[2],
+                dependencies,
+                output,
+            )
+        except (ValueError, ProviderInstallError, RequirementAnalyzerError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        if result.cancelled:
+            output.write("Provider selection cancelled.\n")
+            return 2
+        if result.installed_version is not None:
+            output.write(
+                f"Installed provider CLI: {arguments[2]} ({result.installed_version})\n"
+            )
+        if result.selection is None:
+            error_output.write("Error: Provider selection did not complete\n")
+            return 2
+        output.write(f"Selected provider: {result.selection.provider_key}\n")
         return 0
 
     return 2

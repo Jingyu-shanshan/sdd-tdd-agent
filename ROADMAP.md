@@ -18,7 +18,11 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 - Add a typed Provider Registry while retaining single-provider execution for
   each workflow run.
-- Provide `agent provider list`, `status`, `use`, and later `doctor` commands.
+- Provide `agent provider list`, `status`, `use`, `doctor`, and guarded
+  installation commands.
+- When an adapter-ready CLI is missing in an interactive terminal, ask before
+  downloading the current stable CLI from its verified official source; never
+  install during non-interactive selection or without explicit confirmation.
 - Keep Codex as the first adapter-ready provider.
 - Evaluate Claude Code, Cursor, and GitHub Copilot adapters only after verifying
   their current non-interactive CLI, structured-output, authentication, and

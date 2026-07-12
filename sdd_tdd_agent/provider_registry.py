@@ -7,6 +7,15 @@ from sdd_tdd_agent.analyze_command import load_analyzer_config
 
 
 @dataclass(frozen=True)
+class ProviderInstallPlan:
+    """Verified tokenized download and execution plan for one provider CLI."""
+
+    source_url: str
+    download_command: Tuple[str, ...]
+    installer_command: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ProviderDefinition:
     """One known agent provider and its adapter lifecycle metadata."""
 
@@ -16,6 +25,7 @@ class ProviderDefinition:
     platforms: Tuple[str, ...]
     protocol: Optional[str] = None
     command: Optional[Tuple[str, ...]] = None
+    install_plan: Optional[ProviderInstallPlan] = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +50,11 @@ PROVIDERS = (
         platforms=("macos", "linux-mint"),
         protocol="codex-exec",
         command=("codex",),
+        install_plan=ProviderInstallPlan(
+            source_url="https://chatgpt.com/codex/install.sh",
+            download_command=("curl", "-fsSL", "--output"),
+            installer_command=("sh",),
+        ),
     ),
     ProviderDefinition(
         key="custom-json",
@@ -111,6 +126,11 @@ def render_provider_status(selection: ProviderSelection) -> str:
 
 
 def _find_provider(provider_key: str) -> ProviderDefinition:
+    return get_provider(provider_key)
+
+
+def get_provider(provider_key: str) -> ProviderDefinition:
+    """Return one known provider or raise a safe selection error."""
     for provider in PROVIDERS:
         if provider.key == provider_key:
             return provider
@@ -126,6 +146,13 @@ def _validate_selectable(provider: ProviderDefinition) -> None:
         raise ProviderSelectionError(
             f"Provider requires explicit command configuration: {provider.key}"
         )
+
+
+def validate_provider_selection(provider_key: str) -> ProviderDefinition:
+    """Validate and return one fully configured adapter-ready provider."""
+    provider = get_provider(provider_key)
+    _validate_selectable(provider)
+    return provider
 
 
 def _provider_config(content: str, provider: ProviderDefinition) -> str:

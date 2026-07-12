@@ -85,6 +85,8 @@ Inspect adapter-ready and planned Agent providers without executing them:
 ```bash
 uv run agent provider list
 uv run agent provider status
+uv run agent provider doctor
+uv run agent provider doctor codex
 ```
 
 Select an implemented Provider explicitly:
@@ -92,6 +94,21 @@ Select an implemented Provider explicitly:
 ```bash
 uv run agent provider use codex
 ```
+
+When an adapter-ready CLI is missing in an interactive terminal, `provider use`
+asks before downloading anything. The default is always No. Confirmation
+downloads the current stable CLI from the Provider Registry's verified official
+source, runs the installer as a separate tokenized process, re-locates the
+executable, verifies `--version`, and only then updates project selection.
+Decline or failure preserves configuration and Session state.
+
+The Codex install plan follows the current
+[official Codex CLI instructions](https://developers.openai.com/codex/cli/),
+using `https://chatgpt.com/codex/install.sh`. The documented pipe is deliberately
+split into a `curl --output` process and a separate `sh <temporary-script>`
+process so this platform continues to use `shell=False`. No install is attempted
+from non-interactive selection, and authentication remains a separate manual
+step.
 
 Codex and the custom JSON adapter are implemented. Claude Code, Cursor, and
 GitHub Copilot are listed as planned and cannot be selected until their current

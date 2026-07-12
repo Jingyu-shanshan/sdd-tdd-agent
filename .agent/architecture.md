@@ -57,5 +57,10 @@ only when a failing acceptance test requires it.
   injected resolvers, prefer PATH or explicit configuration, and validate
   subprocess, permission, temporary-file, signal, and toolchain behavior in a
   Linux CI matrix.
+- Diagnose and install provider CLIs behind typed, injected locator and process
+  boundaries. Installation is allowed only for adapter-ready providers with a
+  verified official plan and explicit interactive confirmation. Download and
+  execution are separate tokenized `shell=False` processes; successful install
+  must be followed by executable and version verification before selection.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
