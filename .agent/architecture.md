@@ -49,5 +49,13 @@ only when a failing acceptance test requires it.
 - Resolve the standard `codex` command from PATH first. On macOS only, fall back
   to the executable bundled with the installed ChatGPT application when PATH
   lookup fails; keep custom executable names untouched.
+- Represent supported and planned agents in a typed Provider Registry. Provider
+  selection is explicit and persisted in tracked configuration, while each run
+  still executes exactly one provider. Planned providers must not be selectable
+  until their CLI and structured-output contracts are implemented and tested.
+- Treat Linux Mint as a formal target platform. Keep platform discovery behind
+  injected resolvers, prefer PATH or explicit configuration, and validate
+  subprocess, permission, temporary-file, signal, and toolchain behavior in a
+  Linux CI matrix.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

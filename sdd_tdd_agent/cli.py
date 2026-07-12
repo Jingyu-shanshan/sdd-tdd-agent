@@ -11,6 +11,13 @@ from sdd_tdd_agent.model_adapter import (
 )
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
+from sdd_tdd_agent.provider_registry import (
+    list_providers,
+    load_provider_selection,
+    render_provider_list,
+    render_provider_status,
+    select_provider,
+)
 
 
 def hello(out: TextIO) -> None:
@@ -62,6 +69,28 @@ def main(
             "Requirement analysis ready for review: "
             f"{run.session_id} ({run.next_state})\n"
         )
+        return 0
+
+    if arguments == ["provider", "list"]:
+        output.write(render_provider_list(list_providers()))
+        return 0
+
+    if arguments == ["provider", "status"]:
+        try:
+            selection = load_provider_selection(project_root)
+        except ValueError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_provider_status(selection))
+        return 0
+
+    if len(arguments) == 3 and arguments[0:2] == ["provider", "use"]:
+        try:
+            selection = select_provider(project_root, arguments[2])
+        except ValueError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(f"Selected provider: {selection.provider_key}\n")
         return 0
 
     return 2

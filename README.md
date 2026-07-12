@@ -4,10 +4,11 @@ A CLI platform for software-design-driven development (SDD) and incremental
 test-driven development (TDD), built around a single agent with isolated
 contexts.
 
-## Current increment
+## Current capabilities
 
-The first two slices provide a working CLI and project-workspace
-initialization while establishing the specification and TDD record structure.
+The current slices provide a working CLI, project/session workspace,
+requirement-analysis workflow, typed model adapters, and provider selection
+while preserving the specification and incremental TDD record structure.
 
 ```bash
 uv run agent hello
@@ -78,6 +79,30 @@ uv run agent analyze
 Successful analysis stops at `REQUIREMENT_REVIEW` for human confirmation.
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
+
+Inspect adapter-ready and planned Agent providers without executing them:
+
+```bash
+uv run agent provider list
+uv run agent provider status
+```
+
+Select an implemented Provider explicitly:
+
+```bash
+uv run agent provider use codex
+```
+
+Codex and the custom JSON adapter are implemented. Claude Code, Cursor, and
+GitHub Copilot are listed as planned and cannot be selected until their current
+CLI, structured-output, authentication, and licensing contracts have dedicated
+Adapters and contract tests. Every workflow run continues to use exactly one
+selected Provider.
+
+macOS and Linux Mint are target platforms. Linux Mint support will be validated
+through a formal Python, shell, subprocess, permission, timeout, Java, and
+TypeScript toolchain matrix described in `ROADMAP.md`; the CLI will not silently
+install provider tools or mutate PATH.
 
 Run the test suite with:
 

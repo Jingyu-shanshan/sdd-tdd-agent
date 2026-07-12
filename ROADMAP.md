@@ -12,6 +12,32 @@ and validate the core workflow; it is not the only planned ecosystem.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
+## v0.1.1: Agent provider and platform foundation
+
+### Provider selection
+
+- Add a typed Provider Registry while retaining single-provider execution for
+  each workflow run.
+- Provide `agent provider list`, `status`, `use`, and later `doctor` commands.
+- Keep Codex as the first adapter-ready provider.
+- Evaluate Claude Code, Cursor, and GitHub Copilot adapters only after verifying
+  their current non-interactive CLI, structured-output, authentication, and
+  licensing contracts.
+- Keep a provider-neutral JSON command adapter for custom integrations.
+- Require every provider adapter to pass the same typed contract, failure,
+  timeout, redaction, and workflow-state tests.
+
+### Linux Mint support
+
+- Treat Linux Mint as a formally tested target rather than relying on assumed
+  Python portability.
+- Resolve provider executables from PATH or explicit configuration without
+  silently installing tools or changing environment variables.
+- Test Python 3.9, 3.10, and 3.12; Bash and Zsh; executable permissions;
+  temporary paths; signals; timeouts; and child-process cleanup.
+- Add CI coverage for Maven/Gradle and npm/pnpm/yarn workflows on Linux.
+- Keep platform-specific executable fallbacks isolated behind typed resolvers.
+
 ## v0.2: TypeScript and Angular
 
 ### TypeScript foundation
@@ -42,7 +68,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 ## v1.0: Model and ecosystem extensibility
 
-- Multiple code-agent adapters while retaining single-agent execution.
+- Multiple selectable code-agent adapters while retaining single-agent
+  execution for each run.
 - Project memory, plugin APIs, IDE integration, and additional languages and
   frameworks.
-
