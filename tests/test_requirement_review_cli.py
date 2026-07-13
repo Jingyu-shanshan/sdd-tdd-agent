@@ -37,9 +37,7 @@ def test_should_show_active_requirement_from_cli(tmp_path: Path) -> None:
     exit_code = main(["requirement", "show"], out=output, root=tmp_path)
 
     assert exit_code == 0
-    assert output.getvalue() == (session / "requirement.md").read_text(
-        encoding="utf-8"
-    )
+    assert output.getvalue() == (session / "requirement.md").read_text(encoding="utf-8")
 
 
 def test_should_approve_active_requirement_from_cli(tmp_path: Path) -> None:

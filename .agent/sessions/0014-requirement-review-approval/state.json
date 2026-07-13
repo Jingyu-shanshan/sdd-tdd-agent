@@ -1,7 +1,7 @@
 {
   "session_id": "0014-requirement-review-approval",
   "kind": "feature",
-  "state": "IMPLEMENT",
-  "current_task": 1,
-  "current_cycle": 1
+  "state": "DONE",
+  "current_task": 4,
+  "current_cycle": 3
 }

@@ -38,6 +38,10 @@ only when a failing acceptance test requires it.
   validated Session, require explicit approval or a reasoned rejection, record
   the decision in state, and atomically transition to DESIGN or back to
   ANALYSIS.
+- Isolate design generation behind its own injected typed Protocol and
+  versioned Prompt. Require both DESIGN state and the stored human requirement
+  approval, validate structured design output before mutation, and stop at
+  DESIGN_REVIEW rather than silently entering task breakdown.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

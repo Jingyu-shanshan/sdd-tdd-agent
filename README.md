@@ -91,6 +91,13 @@ requires a reason, records it, and returns the Session to `ANALYSIS`. These
 commands do not invoke a model. Invalid states fail without changing the
 Session.
 
+The design-generation core is also available behind an injected, typed
+`DesignGenerator` boundary. It accepts only a Session in `DESIGN` with a stored
+human approval record, loads the versioned design Prompt and tracked project
+context, validates a structured proposal, writes deterministic `design.md`, and
+stops at `DESIGN_REVIEW`. Production adapter and CLI orchestration for this
+boundary are intentionally deferred to the next increment.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 

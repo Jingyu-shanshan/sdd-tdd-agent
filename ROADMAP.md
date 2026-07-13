@@ -10,6 +10,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 - JUnit 5 detection and incremental test execution.
 - Feature and bug sessions.
 - Explicit human requirement review with approve/reject transitions.
+- Typed design generation that stops for human design review.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
