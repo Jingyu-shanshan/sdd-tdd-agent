@@ -137,9 +137,7 @@ def test_should_run_injected_generator_and_enter_design_review(tmp_path: Path) -
     assert run.session_id == "feature-1"
     assert run.next_state == "DESIGN_REVIEW"
     assert run.proposal == _proposal()
-    assert "# Design Proposal" in (session / "design.md").read_text(
-        encoding="utf-8"
-    )
+    assert "# Design Proposal" in (session / "design.md").read_text(encoding="utf-8")
     state = json.loads((session / "state.json").read_text(encoding="utf-8"))
     assert state["state"] == "DESIGN_REVIEW"
     assert state["requirement_review"] == {"decision": "approved"}

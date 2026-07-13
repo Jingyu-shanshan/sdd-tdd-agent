@@ -2,30 +2,30 @@
 
 ## Task 1: Typed design context
 
-Status: in progress
+Status: complete
 
-1. [ ] Add failing request-loading and Prompt-version tests.
-2. [ ] Implement immutable request/proposal models and generator Protocol.
+1. [x] Add failing request-loading and Prompt-version tests.
+2. [x] Implement immutable request/proposal models and generator Protocol.
 
 ## Task 2: Rendering and workflow
 
-Status: pending
+Status: complete
 
-1. [ ] Add failing deterministic rendering and transition tests.
-2. [ ] Implement proposal validation, artifact rendering, and atomic writes.
+1. [x] Add failing deterministic rendering and transition tests.
+2. [x] Implement proposal validation, artifact rendering, and atomic writes.
 
 ## Task 3: Failure safety
 
-Status: pending
+Status: complete
 
-1. [ ] Cover wrong state, missing approval, mismatched Session, malformed state,
+1. [x] Cover wrong state, missing approval, mismatched Session, malformed state,
    and invalid generator output.
-2. [ ] Verify all failures occur before mutation.
+2. [x] Verify all failures occur before mutation.
 
 ## Task 4: Review
 
-Status: pending
+Status: complete
 
-1. [ ] Update architecture/roadmap documentation and review `.gitignore`.
-2. [ ] Run Ruff, Pyright, pytest, coverage, build, and compatibility checks.
-3. [ ] Validate Session JSON and preserve active product Session state.
+1. [x] Update architecture/roadmap documentation and review `.gitignore`.
+2. [x] Run Ruff, Pyright, pytest, coverage, build, and compatibility checks.
+3. [x] Validate Session JSON and preserve active product Session state.
