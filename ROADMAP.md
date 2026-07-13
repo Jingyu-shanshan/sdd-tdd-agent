@@ -17,6 +17,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   breakdown.
 - Typed ordered task breakdown with dependency, acceptance, and test-target
   validation that stops at task review.
+- Strict JSON command and ephemeral read-only Codex task-breakdown adapters with
+  nested task Schema validation.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

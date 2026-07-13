@@ -125,8 +125,10 @@ The task-breakdown core accepts only `TASK_BREAKDOWN` Sessions with stored
 requirement and design approvals. Through an injected typed generator it creates
 ordered tasks with stable IDs, preceding-task dependencies, affected areas,
 acceptance criteria, and test targets. Valid output writes deterministic
-`tasks.md` and stops at `TASK_REVIEW`. Production adapters and CLI orchestration
-for task breakdown are deferred to subsequent increments.
+`tasks.md` and stops at `TASK_REVIEW`. Strict provider-neutral JSON command and
+Codex exec adapters implement the generator boundary with exact nested task
+Schemas, ephemeral read-only execution, temporary exchange cleanup, and safe
+errors. CLI orchestration for task breakdown is deferred to the next increment.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

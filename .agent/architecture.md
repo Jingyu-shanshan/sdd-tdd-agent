@@ -57,6 +57,11 @@ only when a failing acceptance test requires it.
   Prompt. Require both human approvals, enforce unique stable IDs and only
   preceding-task dependencies, validate acceptance/test targets before
   mutation, and stop at TASK_REVIEW.
+- Implement task-breakdown model integration in a separate adapter module.
+  Decode exact nested task objects through either provider-neutral JSON or the
+  existing ephemeral read-only Codex exchange, reuse injected process and
+  resolver contracts, and leave Session mutation and semantic dependency
+  validation in the task workflow.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
