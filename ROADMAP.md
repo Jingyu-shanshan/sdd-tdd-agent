@@ -15,6 +15,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Active-Session `agent design` orchestration through the selected Provider.
 - Explicit human design review with approve/reject transitions before task
   breakdown.
+- Typed ordered task breakdown with dependency, acceptance, and test-target
+  validation that stops at task review.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

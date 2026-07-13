@@ -121,6 +121,13 @@ Approval records the decision and enters `TASK_BREAKDOWN`. Rejection requires a
 reason, records it, and returns to `DESIGN`. These review commands do not invoke
 a model or process runner.
 
+The task-breakdown core accepts only `TASK_BREAKDOWN` Sessions with stored
+requirement and design approvals. Through an injected typed generator it creates
+ordered tasks with stable IDs, preceding-task dependencies, affected areas,
+acceptance criteria, and test targets. Valid output writes deterministic
+`tasks.md` and stops at `TASK_REVIEW`. Production adapters and CLI orchestration
+for task breakdown are deferred to subsequent increments.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 

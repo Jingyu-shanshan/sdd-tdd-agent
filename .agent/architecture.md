@@ -53,6 +53,10 @@ only when a failing acceptance test requires it.
 - Keep design review model-free and explicit. Require DESIGN_REVIEW plus the
   persisted requirement approval, atomically record approve/reject decisions,
   and transition only to TASK_BREAKDOWN or back to DESIGN.
+- Generate task breakdowns behind an injected typed Protocol and versioned
+  Prompt. Require both human approvals, enforce unique stable IDs and only
+  preceding-task dependencies, validate acceptance/test targets before
+  mutation, and stop at TASK_REVIEW.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
