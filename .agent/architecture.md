@@ -50,6 +50,9 @@ only when a failing acceptance test requires it.
   the selected Provider protocol, command, and timeout, chooses the matching
   design adapter, and delegates all state/artifact validation to the design
   workflow.
+- Keep design review model-free and explicit. Require DESIGN_REVIEW plus the
+  persisted requirement approval, atomically record approve/reject decisions,
+  and transition only to TASK_BREAKDOWN or back to DESIGN.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

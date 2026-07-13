@@ -13,6 +13,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Typed design generation with JSON/Codex adapters that stops for human design
   review.
 - Active-Session `agent design` orchestration through the selected Provider.
+- Explicit human design review with approve/reject transitions before task
+  breakdown.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

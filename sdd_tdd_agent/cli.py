@@ -7,6 +7,12 @@ from sdd_tdd_agent.analyze_command import (
     load_analyzer_config,
 )
 from sdd_tdd_agent.design_command import generate_active_design
+from sdd_tdd_agent.design_review import (
+    DesignReviewError,
+    approve_active_design,
+    load_active_design_review,
+    reject_active_design,
+)
 from sdd_tdd_agent.feature_session import create_feature_session
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
@@ -102,6 +108,40 @@ def main(
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Design ready for review: {run.session_id} ({run.next_state})\n")
+        return 0
+
+    if arguments == ["design", "show"]:
+        try:
+            review = load_active_design_review(project_root)
+        except DesignReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(review.design)
+        return 0
+
+    if arguments == ["design", "approve"]:
+        try:
+            decision = approve_active_design(project_root)
+        except DesignReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Design approved: {decision.session_id} ({decision.next_state})\n"
+        )
+        return 0
+
+    if arguments and arguments[0:2] == ["design", "reject"]:
+        try:
+            decision = reject_active_design(
+                project_root,
+                " ".join(arguments[2:]),
+            )
+        except DesignReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Design rejected: {decision.session_id} ({decision.next_state})\n"
+        )
         return 0
 
     if arguments == ["requirement", "show"]:

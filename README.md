@@ -109,6 +109,18 @@ The command requires `DESIGN` state and the stored human approval record. A
 valid structured result writes `design.md` and stops at `DESIGN_REVIEW`; invalid
 configuration, state, or model output fails without advancing the Session.
 
+Inspect and make the explicit human design decision with:
+
+```bash
+uv run agent design show
+uv run agent design approve
+uv run agent design reject "Clarify the component boundary"
+```
+
+Approval records the decision and enters `TASK_BREAKDOWN`. Rejection requires a
+reason, records it, and returns to `DESIGN`. These review commands do not invoke
+a model or process runner.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 
