@@ -95,8 +95,19 @@ The design-generation core is also available behind an injected, typed
 `DesignGenerator` boundary. It accepts only a Session in `DESIGN` with a stored
 human approval record, loads the versioned design Prompt and tracked project
 context, validates a structured proposal, writes deterministic `design.md`, and
-stops at `DESIGN_REVIEW`. Production adapter and CLI orchestration for this
-boundary are intentionally deferred to the next increment.
+stops at `DESIGN_REVIEW`. Strict provider-neutral JSON command and Codex exec
+adapters implement this boundary. Codex design runs use the same ephemeral,
+read-only, shell-free, strict-Schema exchange as requirement analysis. CLI
+orchestration uses the currently selected Provider configuration. After
+explicitly approving a requirement, generate the active Session design with:
+
+```bash
+uv run agent design
+```
+
+The command requires `DESIGN` state and the stored human approval record. A
+valid structured result writes `design.md` and stops at `DESIGN_REVIEW`; invalid
+configuration, state, or model output fails without advancing the Session.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

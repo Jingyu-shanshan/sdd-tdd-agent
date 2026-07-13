@@ -6,6 +6,7 @@ from sdd_tdd_agent.analyze_command import (
     analyze_active_requirement,
     load_analyzer_config,
 )
+from sdd_tdd_agent.design_command import generate_active_design
 from sdd_tdd_agent.feature_session import create_feature_session
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
@@ -91,6 +92,16 @@ def main(
             "Requirement analysis ready for review: "
             f"{run.session_id} ({run.next_state})\n"
         )
+        return 0
+
+    if arguments == ["design"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        try:
+            run = generate_active_design(project_root, process_runner)
+        except (ValueError, RequirementAnalyzerError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(f"Design ready for review: {run.session_id} ({run.next_state})\n")
         return 0
 
     if arguments == ["requirement", "show"]:

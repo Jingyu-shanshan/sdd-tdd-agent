@@ -42,6 +42,14 @@ only when a failing acceptance test requires it.
   versioned Prompt. Require both DESIGN state and the stored human requirement
   approval, validate structured design output before mutation, and stop at
   DESIGN_REVIEW rather than silently entering task breakdown.
+- Implement design model integration in a separate adapter module. Reuse the
+  existing tokenized process/configuration/resolver contracts, enforce the exact
+  ten-field JSON Schema, and apply the same ephemeral read-only Codex exchange
+  without mixing Session mutation into provider code.
+- Compose `agent design` through a dedicated active-Session service that reuses
+  the selected Provider protocol, command, and timeout, chooses the matching
+  design adapter, and delegates all state/artifact validation to the design
+  workflow.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
