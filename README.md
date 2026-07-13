@@ -77,6 +77,20 @@ uv run agent analyze
 ```
 
 Successful analysis stops at `REQUIREMENT_REVIEW` for human confirmation.
+Inspect the active analyzed requirement and make the explicit human decision
+with:
+
+```bash
+uv run agent requirement show
+uv run agent requirement approve
+uv run agent requirement reject "Clarify the expected output"
+```
+
+Approval records the decision and advances the Session to `DESIGN`. Rejection
+requires a reason, records it, and returns the Session to `ANALYSIS`. These
+commands do not invoke a model. Invalid states fail without changing the
+Session.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 

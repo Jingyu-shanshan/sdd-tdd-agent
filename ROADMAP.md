@@ -9,6 +9,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Maven and Gradle project detection.
 - JUnit 5 detection and incremental test execution.
 - Feature and bug sessions.
+- Explicit human requirement review with approve/reject transitions.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

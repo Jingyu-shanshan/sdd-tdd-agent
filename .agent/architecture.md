@@ -34,6 +34,10 @@ only when a failing acceptance test requires it.
 - Isolate requirement-analysis models behind an injected typed Protocol. Load
   versioned Prompts from packaged files, validate all structured output before
   mutation, and require human review before DESIGN.
+- Keep requirement review deterministic and model-free. Load only the active
+  validated Session, require explicit approval or a reasoned rejection, record
+  the decision in state, and atomically transition to DESIGN or back to
+  ANALYSIS.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

@@ -53,6 +53,8 @@ def _load_session_state(root: Path, session_id: Optional[str]) -> Optional[str]:
         raise ValueError(f"Invalid session identifier: {session_id}")
     state_path = root / ".agent" / "sessions" / session_id / "state.json"
     payload = json.loads(state_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Session state must be a JSON object")
     state = payload.get("state")
     if not isinstance(state, str):
         raise ValueError("Session state must be a string")

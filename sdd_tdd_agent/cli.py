@@ -20,6 +20,12 @@ from sdd_tdd_agent.platform_contract import (
 )
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
+from sdd_tdd_agent.requirement_review import (
+    RequirementReviewError,
+    approve_active_requirement,
+    load_active_requirement_review,
+    reject_active_requirement,
+)
 from sdd_tdd_agent.provider_registry import (
     list_providers,
     load_provider_selection,
@@ -84,6 +90,40 @@ def main(
         output.write(
             "Requirement analysis ready for review: "
             f"{run.session_id} ({run.next_state})\n"
+        )
+        return 0
+
+    if arguments == ["requirement", "show"]:
+        try:
+            review = load_active_requirement_review(project_root)
+        except RequirementReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(review.requirement)
+        return 0
+
+    if arguments == ["requirement", "approve"]:
+        try:
+            decision = approve_active_requirement(project_root)
+        except RequirementReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Requirement approved: {decision.session_id} ({decision.next_state})\n"
+        )
+        return 0
+
+    if arguments and arguments[0:2] == ["requirement", "reject"]:
+        try:
+            decision = reject_active_requirement(
+                project_root,
+                " ".join(arguments[2:]),
+            )
+        except RequirementReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Requirement rejected: {decision.session_id} ({decision.next_state})\n"
         )
         return 0
 
