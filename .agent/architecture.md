@@ -66,6 +66,10 @@ only when a failing acceptance test requires it.
   strict tracked configuration, selects the matching task adapter, and delegates
   both approvals, state validation, task semantics, and artifact mutation to the
   task-breakdown workflow.
+- Keep task review deterministic, model-free, and explicit. Require TASK_REVIEW
+  plus both persisted approvals, validate generated task content, atomically
+  record approve/reject decisions, and transition only to TEST_GENERATION or
+  back to TASK_BREAKDOWN.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

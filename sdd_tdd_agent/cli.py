@@ -34,6 +34,12 @@ from sdd_tdd_agent.requirement_review import (
     reject_active_requirement,
 )
 from sdd_tdd_agent.task_command import generate_active_tasks
+from sdd_tdd_agent.task_review import (
+    TaskReviewError,
+    approve_active_tasks,
+    load_active_task_review,
+    reject_active_tasks,
+)
 from sdd_tdd_agent.provider_registry import (
     list_providers,
     load_provider_selection,
@@ -119,6 +125,36 @@ def main(
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Tasks ready for review: {run.session_id} ({run.next_state})\n")
+        return 0
+
+    if arguments == ["tasks", "show"]:
+        try:
+            review = load_active_task_review(project_root)
+        except TaskReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(review.tasks)
+        return 0
+
+    if arguments == ["tasks", "approve"]:
+        try:
+            decision = approve_active_tasks(project_root)
+        except TaskReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(f"Tasks approved: {decision.session_id} ({decision.next_state})\n")
+        return 0
+
+    if arguments and arguments[0:2] == ["tasks", "reject"]:
+        try:
+            decision = reject_active_tasks(
+                project_root,
+                " ".join(arguments[2:]),
+            )
+        except TaskReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(f"Tasks rejected: {decision.session_id} ({decision.next_state})\n")
         return 0
 
     if arguments == ["design", "show"]:

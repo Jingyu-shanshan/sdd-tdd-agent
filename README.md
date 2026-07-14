@@ -137,8 +137,20 @@ uv run agent tasks
 
 The command requires `TASK_BREAKDOWN` state and both stored human approvals. A
 valid structured result writes `tasks.md` and stops at `TASK_REVIEW`; invalid
-configuration, state, or model output fails without advancing the Session. Task
-review commands are deferred to a subsequent increment.
+configuration, state, or model output fails without advancing the Session.
+
+Inspect and make the explicit human task decision with:
+
+```bash
+uv run agent tasks show
+uv run agent tasks approve
+uv run agent tasks reject "Split the CLI task"
+```
+
+Approval records the decision and enters `TEST_GENERATION`. Rejection requires a
+reason, records it, and returns to `TASK_BREAKDOWN`. These review commands do not
+invoke a model or process runner, and invalid review input does not mutate the
+Session.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

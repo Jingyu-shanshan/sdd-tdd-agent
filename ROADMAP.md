@@ -21,6 +21,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   nested task Schema validation.
 - Active-Session `agent tasks` orchestration through the selected Provider that
   stops at task review.
+- Explicit human task review with show/approve/reject transitions before test
+  generation.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
