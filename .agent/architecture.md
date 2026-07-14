@@ -62,6 +62,10 @@ only when a failing acceptance test requires it.
   existing ephemeral read-only Codex exchange, reuse injected process and
   resolver contracts, and leave Session mutation and semantic dependency
   validation in the task workflow.
+- Compose `agent tasks` through a dedicated active-Session service that reuses
+  strict tracked configuration, selects the matching task adapter, and delegates
+  both approvals, state validation, task semantics, and artifact mutation to the
+  task-breakdown workflow.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

@@ -33,6 +33,7 @@ from sdd_tdd_agent.requirement_review import (
     load_active_requirement_review,
     reject_active_requirement,
 )
+from sdd_tdd_agent.task_command import generate_active_tasks
 from sdd_tdd_agent.provider_registry import (
     list_providers,
     load_provider_selection,
@@ -108,6 +109,16 @@ def main(
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Design ready for review: {run.session_id} ({run.next_state})\n")
+        return 0
+
+    if arguments == ["tasks"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        try:
+            run = generate_active_tasks(project_root, process_runner)
+        except (ValueError, RequirementAnalyzerError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(f"Tasks ready for review: {run.session_id} ({run.next_state})\n")
         return 0
 
     if arguments == ["design", "show"]:

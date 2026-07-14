@@ -128,7 +128,17 @@ acceptance criteria, and test targets. Valid output writes deterministic
 `tasks.md` and stops at `TASK_REVIEW`. Strict provider-neutral JSON command and
 Codex exec adapters implement the generator boundary with exact nested task
 Schemas, ephemeral read-only execution, temporary exchange cleanup, and safe
-errors. CLI orchestration for task breakdown is deferred to the next increment.
+errors. After explicitly approving the design, generate tasks for the active
+Session through the currently configured Provider with:
+
+```bash
+uv run agent tasks
+```
+
+The command requires `TASK_BREAKDOWN` state and both stored human approvals. A
+valid structured result writes `tasks.md` and stops at `TASK_REVIEW`; invalid
+configuration, state, or model output fails without advancing the Session. Task
+review commands are deferred to a subsequent increment.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

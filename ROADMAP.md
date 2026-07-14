@@ -19,6 +19,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   validation that stops at task review.
 - Strict JSON command and ephemeral read-only Codex task-breakdown adapters with
   nested task Schema validation.
+- Active-Session `agent tasks` orchestration through the selected Provider that
+  stops at task review.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
