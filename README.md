@@ -158,8 +158,11 @@ independently executable tests across happy-path, boundary, exception,
 integration, and regression phases. It enforces stable test/task IDs,
 preceding-test dependencies, complete task coverage, and safe relative target
 paths. Valid output writes deterministic `test-plan.md` and enters
-`IMPLEMENTATION`; it does not write or run test code. Production adapters and CLI
-orchestration for test-plan generation are deferred to subsequent increments.
+`IMPLEMENTATION`; it does not write or run test code. Strict provider-neutral
+JSON command and Codex exec adapters implement this generator boundary with an
+exact nested case Schema, ephemeral read-only execution, private temporary
+exchange cleanup, and safe errors. CLI orchestration remains deferred to the
+next increment.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

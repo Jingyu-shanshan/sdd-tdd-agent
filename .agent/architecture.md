@@ -75,6 +75,10 @@ only when a failing acceptance test requires it.
   happy/boundary/exception/integration/regression order and only preceding-test
   dependencies, validate relative target paths before mutation, and enter
   IMPLEMENTATION without writing or running test code.
+- Implement test-plan model integration in a separate adapter module. Decode
+  exact nested case objects through provider-neutral JSON or the existing
+  ephemeral read-only Codex exchange, reuse injected process/resolver contracts,
+  and leave semantic ordering and Session mutation in the workflow.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

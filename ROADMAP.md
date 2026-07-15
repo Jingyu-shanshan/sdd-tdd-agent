@@ -25,6 +25,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   generation.
 - Typed incremental test-plan generation with ordered phases, task coverage,
   preceding-test dependencies, and safe target-path validation.
+- Strict JSON command and ephemeral read-only Codex test-plan adapters with
+  nested case Schema validation.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
