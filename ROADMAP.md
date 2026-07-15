@@ -23,6 +23,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   stops at task review.
 - Explicit human task review with show/approve/reject transitions before test
   generation.
+- Typed incremental test-plan generation with ordered phases, task coverage,
+  preceding-test dependencies, and safe target-path validation.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

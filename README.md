@@ -152,6 +152,15 @@ reason, records it, and returns to `TASK_BREAKDOWN`. These review commands do no
 invoke a model or process runner, and invalid review input does not mutate the
 Session.
 
+The test-generation core accepts only `TEST_GENERATION` Sessions with all three
+stored human approvals. Through an injected typed generator it plans ordered,
+independently executable tests across happy-path, boundary, exception,
+integration, and regression phases. It enforces stable test/task IDs,
+preceding-test dependencies, complete task coverage, and safe relative target
+paths. Valid output writes deterministic `test-plan.md` and enters
+`IMPLEMENTATION`; it does not write or run test code. Production adapters and CLI
+orchestration for test-plan generation are deferred to subsequent increments.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 

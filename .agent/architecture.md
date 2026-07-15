@@ -70,6 +70,11 @@ only when a failing acceptance test requires it.
   plus both persisted approvals, validate generated task content, atomically
   record approve/reject decisions, and transition only to TEST_GENERATION or
   back to TASK_BREAKDOWN.
+- Generate test plans behind an injected typed Protocol and versioned Prompt.
+  Require all three human approvals, cover every approved task, enforce the
+  happy/boundary/exception/integration/regression order and only preceding-test
+  dependencies, validate relative target paths before mutation, and enter
+  IMPLEMENTATION without writing or running test code.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
