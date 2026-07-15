@@ -173,6 +173,13 @@ The command requires `TEST_GENERATION` plus all three approvals. Valid output
 writes `test-plan.md` and enters `IMPLEMENTATION`; configuration, state, or model
 failure does not advance the Session.
 
+The implementation-cycle core then selects exactly one incomplete test in plan
+order and atomically records `WRITE_TEST` progress. Completed tests must form a
+plan prefix and all dependencies must already be GREEN. Its typed Blind
+development context exposes only the current test, explicitly supplied
+production snapshots, and compile/test output—never requirements, design,
+tasks, or future tests.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 

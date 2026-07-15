@@ -28,6 +28,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Strict JSON command and ephemeral read-only Codex test-plan adapters with
   nested case Schema validation.
 - Active-Session `agent tests` orchestration through the selected Provider.
+- One-test-at-a-time cycle selection and a typed Blind development context.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

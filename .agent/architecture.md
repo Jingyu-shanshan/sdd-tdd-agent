@@ -82,6 +82,10 @@ only when a failing acceptance test requires it.
 - Compose `agent tests` through a dedicated active-Session service that selects
   the configured test-plan adapter and delegates approvals, semantics, and
   artifact/state mutation to the core workflow.
+- Parse only deterministic generated test plans when entering implementation.
+  Track an ordered completed-test prefix and one current cycle in Session state;
+  keep the developer context restricted to the current test, production source,
+  and compiler/test output.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
