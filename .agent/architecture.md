@@ -91,6 +91,12 @@ only when a failing acceptance test requires it.
   snapshots; exclude tasks, the complete plan, future tests, and execution
   output. Bind strict JSON/Codex results to the current test ID and planned file
   without letting the read-only model exchange mutate the project.
+- Compose the IMPLEMENTATION slice of `agent continue` from recoverable cycle
+  preparation, bounded workspace source collection, the selected test-source
+  adapter, and an optimistic-concurrency atomic writer. Run Codex from a
+  project-external temporary directory so its read-only tools cannot bypass the
+  typed Test Context. Leave the cycle in WRITE_TEST until RED is independently
+  observed.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

@@ -186,8 +186,19 @@ supplied safe source snapshots. It cannot see tasks, the complete test plan,
 future tests, or compiler/test output. A versioned Prompt and typed generator
 produce one complete test file; strict JSON command and ephemeral read-only
 Codex adapters require the result to match the current test ID and its planned
-relative path. This layer validates only and does not yet write the file or run
-the RED test.
+relative path. Continue the active IMPLEMENTATION Session with:
+
+```bash
+uv run agent continue
+```
+
+The command resumes or starts exactly one `WRITE_TEST` cycle, collects bounded
+current source/config snapshots, invokes the selected Provider, and atomically
+writes only the planned test file. Existing targets use optimistic concurrency
+checks; unsafe paths, symbolic links, stale snapshots, and temporary collisions
+fail before replacement. Codex runs from a project-external temporary directory
+so read-only tool access cannot inspect `.agent` or future tests. Success remains
+in `WRITE_TEST`; the next stage must still execute the test and prove RED.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

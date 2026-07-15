@@ -41,6 +41,8 @@ from sdd_tdd_agent.task_review import (
     reject_active_tasks,
 )
 from sdd_tdd_agent.test_command import generate_active_test_plan
+from sdd_tdd_agent.test_source_command import generate_active_test_source
+from sdd_tdd_agent.test_source_workspace import TestSourceWorkspaceError
 from sdd_tdd_agent.provider_registry import (
     list_providers,
     load_provider_selection,
@@ -187,6 +189,23 @@ def main(
             return 2
         output.write(
             f"Test plan ready for implementation: {run.session_id} ({run.next_state})\n"
+        )
+        return 0
+
+    if arguments == ["continue"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        try:
+            run = generate_active_test_source(project_root, process_runner)
+        except (
+            ValueError,
+            RequirementAnalyzerError,
+            TestSourceWorkspaceError,
+        ) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            "Test source ready for RED: "
+            f"{run.session_id} ({run.test_id} -> {run.file_path})\n"
         )
         return 0
 

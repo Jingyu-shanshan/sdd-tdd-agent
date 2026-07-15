@@ -205,6 +205,51 @@ def _next_case(context: _CycleContext) -> Optional[TestCasePlan]:
     return None
 
 
+def _current_case(context: _CycleContext) -> TestCasePlan:
+    progress = context.state.get("tdd_cycle")
+    if not isinstance(progress, dict):
+        raise ValueError("TDD cycle progress is invalid")
+    current_test = progress.get("current_test")
+    for case in context.cases:
+        if case.test_id == current_test:
+            return case
+    raise ValueError("Current TDD test does not exist in generated plan")
+
+
+def _cycle_number(state: Dict[str, object]) -> int:
+    value = state.get("current_cycle", 0)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("Session cycle number is invalid")
+    return value
+
+
+def _start_cycle(context: _CycleContext) -> TddCycleStart:
+    session_id = context.state.get("session_id")
+    if not isinstance(session_id, str):
+        raise ValueError("Session state identifier is invalid")
+    test_case = _next_case(context)
+    if test_case is None:
+        raise ValueError("All planned tests are complete")
+    cycle_number = _cycle_number(context.state) + 1
+    context.state["current_task"] = test_case.task_id
+    context.state["current_cycle"] = cycle_number
+    context.state["tdd_cycle"] = {
+        "current_test": test_case.test_id,
+        "phase": "WRITE_TEST",
+        "completed_tests": list(context.completed_tests),
+    }
+    serialized = f"{json.dumps(context.state, indent=2)}\n"
+    state_path = context.session_path / "state.json"
+    temporary = context.session_path / ".state.json.tdd-cycle.tmp"
+    temporary.write_text(serialized, encoding="utf-8")
+    temporary.replace(state_path)
+    return TddCycleStart(
+        session_id,
+        cycle_number,
+        test_case,
+    )
+
+
 def select_next_test_case(root: Path, session_id: str) -> Optional[TestCasePlan]:
     """Read and select the next incomplete generated test without mutation."""
     return _next_case(_load_cycle_context(root, session_id))
@@ -221,14 +266,21 @@ def load_current_test_case(
     context = _load_cycle_context(root, session_id)
     if context.active_phase != expected_phase:
         raise ValueError(f"Current TDD cycle must be in {expected_phase} phase")
-    progress = context.state.get("tdd_cycle")
-    if not isinstance(progress, dict):
-        raise ValueError("TDD cycle progress is invalid")
-    current_test = progress.get("current_test")
-    for case in context.cases:
-        if case.test_id == current_test:
-            return case
-    raise ValueError("Current TDD test does not exist in generated plan")
+    return _current_case(context)
+
+
+def prepare_write_test_cycle(root: Path, session_id: str) -> TddCycleStart:
+    """Resume WRITE_TEST or atomically start the next eligible test cycle."""
+    context = _load_cycle_context(root, session_id)
+    if context.active_phase == "WRITE_TEST":
+        return TddCycleStart(
+            session_id,
+            _cycle_number(context.state),
+            _current_case(context),
+        )
+    if context.active_phase is not None and context.active_phase != "GREEN":
+        raise ValueError("A TDD cycle is already active")
+    return _start_cycle(context)
 
 
 def start_next_tdd_cycle(root: Path, session_id: str) -> TddCycleStart:
@@ -236,23 +288,4 @@ def start_next_tdd_cycle(root: Path, session_id: str) -> TddCycleStart:
     context = _load_cycle_context(root, session_id)
     if context.active_phase is not None and context.active_phase != "GREEN":
         raise ValueError("A TDD cycle is already active")
-    test_case = _next_case(context)
-    if test_case is None:
-        raise ValueError("All planned tests are complete")
-    current_cycle = context.state.get("current_cycle", 0)
-    if isinstance(current_cycle, bool) or not isinstance(current_cycle, int):
-        raise ValueError("Session cycle number is invalid")
-    cycle_number = current_cycle + 1
-    context.state["current_task"] = test_case.task_id
-    context.state["current_cycle"] = cycle_number
-    context.state["tdd_cycle"] = {
-        "current_test": test_case.test_id,
-        "phase": "WRITE_TEST",
-        "completed_tests": list(context.completed_tests),
-    }
-    serialized = f"{json.dumps(context.state, indent=2)}\n"
-    state_path = context.session_path / "state.json"
-    temporary = context.session_path / ".state.json.tdd-cycle.tmp"
-    temporary.write_text(serialized, encoding="utf-8")
-    temporary.replace(state_path)
-    return TddCycleStart(session_id, cycle_number, test_case)
+    return _start_cycle(context)

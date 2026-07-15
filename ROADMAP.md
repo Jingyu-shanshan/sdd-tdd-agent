@@ -30,6 +30,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Active-Session `agent tests` orchestration through the selected Provider.
 - One-test-at-a-time cycle selection and a typed Blind development context.
 - Isolated one-test source generation with strict JSON and Codex adapters.
+- Safe active-Session test-source writing through the first `agent continue`
+  IMPLEMENTATION slice.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
