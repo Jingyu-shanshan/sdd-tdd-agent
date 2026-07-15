@@ -79,6 +79,9 @@ only when a failing acceptance test requires it.
   exact nested case objects through provider-neutral JSON or the existing
   ephemeral read-only Codex exchange, reuse injected process/resolver contracts,
   and leave semantic ordering and Session mutation in the workflow.
+- Compose `agent tests` through a dedicated active-Session service that selects
+  the configured test-plan adapter and delegates approvals, semantics, and
+  artifact/state mutation to the core workflow.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

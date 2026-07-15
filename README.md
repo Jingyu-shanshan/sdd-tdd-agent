@@ -162,7 +162,16 @@ paths. Valid output writes deterministic `test-plan.md` and enters
 JSON command and Codex exec adapters implement this generator boundary with an
 exact nested case Schema, ephemeral read-only execution, private temporary
 exchange cleanup, and safe errors. CLI orchestration remains deferred to the
-next increment.
+next increment. Generate the active Session plan through the currently selected
+Provider with:
+
+```bash
+uv run agent tests
+```
+
+The command requires `TEST_GENERATION` plus all three approvals. Valid output
+writes `test-plan.md` and enters `IMPLEMENTATION`; configuration, state, or model
+failure does not advance the Session.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

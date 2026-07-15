@@ -40,6 +40,7 @@ from sdd_tdd_agent.task_review import (
     load_active_task_review,
     reject_active_tasks,
 )
+from sdd_tdd_agent.test_command import generate_active_test_plan
 from sdd_tdd_agent.provider_registry import (
     list_providers,
     load_provider_selection,
@@ -174,6 +175,18 @@ def main(
             return 2
         output.write(
             f"Design approved: {decision.session_id} ({decision.next_state})\n"
+        )
+        return 0
+
+    if arguments == ["tests"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        try:
+            run = generate_active_test_plan(project_root, process_runner)
+        except (ValueError, RequirementAnalyzerError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Test plan ready for implementation: {run.session_id} ({run.next_state})\n"
         )
         return 0
 
