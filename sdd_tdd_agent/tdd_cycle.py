@@ -210,6 +210,27 @@ def select_next_test_case(root: Path, session_id: str) -> Optional[TestCasePlan]
     return _next_case(_load_cycle_context(root, session_id))
 
 
+def load_current_test_case(
+    root: Path,
+    session_id: str,
+    expected_phase: str,
+) -> TestCasePlan:
+    """Load the active current test only when it is in the expected TDD phase."""
+    if expected_phase not in TDD_PHASES:
+        raise ValueError("Expected TDD phase is invalid")
+    context = _load_cycle_context(root, session_id)
+    if context.active_phase != expected_phase:
+        raise ValueError(f"Current TDD cycle must be in {expected_phase} phase")
+    progress = context.state.get("tdd_cycle")
+    if not isinstance(progress, dict):
+        raise ValueError("TDD cycle progress is invalid")
+    current_test = progress.get("current_test")
+    for case in context.cases:
+        if case.test_id == current_test:
+            return case
+    raise ValueError("Current TDD test does not exist in generated plan")
+
+
 def start_next_tdd_cycle(root: Path, session_id: str) -> TddCycleStart:
     """Atomically start exactly one planned test-writing cycle."""
     context = _load_cycle_context(root, session_id)

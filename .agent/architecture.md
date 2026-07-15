@@ -86,6 +86,11 @@ only when a failing acceptance test requires it.
   Track an ordered completed-test prefix and one current cycle in Session state;
   keep the developer context restricted to the current test, production source,
   and compiler/test output.
+- Generate one test source behind a separate typed Test Context. Supply only the
+  approved requirement/design, current test case, and explicit safe source
+  snapshots; exclude tasks, the complete plan, future tests, and execution
+  output. Bind strict JSON/Codex results to the current test ID and planned file
+  without letting the read-only model exchange mutate the project.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

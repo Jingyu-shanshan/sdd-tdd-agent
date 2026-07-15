@@ -29,6 +29,7 @@ and validate the core workflow; it is not the only planned ecosystem.
   nested case Schema validation.
 - Active-Session `agent tests` orchestration through the selected Provider.
 - One-test-at-a-time cycle selection and a typed Blind development context.
+- Isolated one-test source generation with strict JSON and Codex adapters.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 

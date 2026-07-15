@@ -180,6 +180,15 @@ development context exposes only the current test, explicitly supplied
 production snapshots, and compile/test output—never requirements, design,
 tasks, or future tests.
 
+The single-test generation core uses a separate Test Context: it may see the
+approved requirement/design, exactly one current test case, and explicitly
+supplied safe source snapshots. It cannot see tasks, the complete test plan,
+future tests, or compiler/test output. A versioned Prompt and typed generator
+produce one complete test file; strict JSON command and ephemeral read-only
+Codex adapters require the result to match the current test ID and its planned
+relative path. This layer validates only and does not yet write the file or run
+the RED test.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 
