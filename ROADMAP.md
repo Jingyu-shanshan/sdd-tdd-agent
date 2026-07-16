@@ -32,6 +32,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Isolated one-test source generation with strict JSON and Codex adapters.
 - Safe active-Session test-source writing through the first `agent continue`
   IMPLEMENTATION slice.
+- Shell-free one-test command planning for Maven/Gradle/JUnit 5 and
+  npm/pnpm/yarn with Jest, Vitest, or Angular CLI.
 - One-failing-test-at-a-time orchestration.
 - Context isolation and state-machine recovery.
 
@@ -73,6 +75,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 ### TypeScript foundation
 
+- Root package-manager and Jest/Vitest test-command detection is implemented;
+  execution/state orchestration remains in the active core-workflow milestone.
 - Detect TypeScript projects from project metadata and configuration files.
 - Detect npm, pnpm, and yarn without assuming a package manager.
 - Detect and invoke the project's configured Jest or Vitest commands.
@@ -82,6 +86,9 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 ### Angular adapter
 
+- Root Angular workspace detection and exact non-watch file/name command
+  planning is implemented; Angular-specific generation and execution coverage
+  continues in this milestone.
 - Detect Angular workspaces and applications from their project metadata.
 - Capture Angular architecture constraints in SDD design documents.
 - Support incremental tests for components, services, directives, pipes,

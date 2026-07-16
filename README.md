@@ -31,7 +31,10 @@ The command creates `.agent/` metadata plus the `memories`, `sessions`,
 metadata. Fresh workspaces also record Java/Maven projects detected by
 `pom.xml` and Java/Gradle projects detected by `build.gradle` or
 `build.gradle.kts`. Maven projects declaring an `org.junit.jupiter` dependency
-also record JUnit 5 as their test framework.
+also record JUnit 5 as their test framework. Root TypeScript projects are
+detected from strict `package.json` metadata plus an explicit `packageManager`
+or one consistent lockfile; configured Jest, Vitest, and Angular test scripts
+are reported without guessing a package manager or framework.
 
 Inspect project classification and the active development session with:
 
@@ -199,6 +202,16 @@ checks; unsafe paths, symbolic links, stale snapshots, and temporary collisions
 fail before replacement. Codex runs from a project-external temporary directory
 so read-only tool access cannot inspect `.agent` or future tests. Success remains
 in `WRITE_TEST`; the next stage must still execute the test and prove RED.
+
+The read-only execution planner already supports the next stage across the
+planned ecosystems. It builds tokenized one-test commands for Maven or Gradle
+with JUnit 5, and for npm, pnpm, or yarn projects using Jest, Vitest, or Angular
+CLI. Java uses fully qualified class/method selectors. Node runners use one
+exact file plus an escaped and anchored test-name expression; Vitest and Angular
+watch behavior is disabled. Ambiguous lockfiles, conflicting `packageManager`
+metadata, unverified frameworks, unsafe paths, and unsupported layouts fail
+explicitly. Command execution and RED evidence are implemented in the next
+increment.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

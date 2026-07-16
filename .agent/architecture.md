@@ -97,6 +97,11 @@ only when a failing acceptance test requires it.
   project-external temporary directory so its read-only tools cannot bypass the
   typed Test Context. Leave the cycle in WRITE_TEST until RED is independently
   observed.
+- Plan one-test execution through a read-only cross-ecosystem detector. Share
+  strict Node metadata between project classification and command construction;
+  require explicit package-manager/framework evidence, use tokenized Maven/
+  Gradle/Jest/Vitest/Angular filters, and escape/anchor regex-based Node test
+  names so one cycle cannot accidentally run additional tests.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
