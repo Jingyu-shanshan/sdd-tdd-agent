@@ -1,6 +1,10 @@
 from pathlib import Path
 from typing import Optional, Union
 
+from sdd_tdd_agent.cycle_completion import (
+    ImplementationCompletionRun,
+    complete_active_implementation,
+)
 from sdd_tdd_agent.execution_config import load_test_command_timeout
 from sdd_tdd_agent.green_verification import (
     GreenVerificationRun,
@@ -26,7 +30,10 @@ from sdd_tdd_agent.test_source_command import (
     TestSourceCommandRun,
     generate_active_test_source,
 )
-from sdd_tdd_agent.tdd_cycle import load_current_tdd_phase
+from sdd_tdd_agent.tdd_cycle import (
+    load_current_tdd_phase,
+    select_next_test_case,
+)
 
 
 ImplementationCommandRun = Union[
@@ -34,6 +41,7 @@ ImplementationCommandRun = Union[
     RedExecutionRun,
     ProductionSourceCommandRun,
     GreenVerificationRun,
+    ImplementationCompletionRun,
 ]
 
 
@@ -73,4 +81,12 @@ def continue_active_implementation(
         )
     if phase == "IMPLEMENT":
         return verify_active_implementation(root, test_runner)
+    if phase == "GREEN":
+        if select_next_test_case(root, session_id) is not None:
+            return generate_active_test_source(
+                root,
+                model_runner,
+                command_resolver=command_resolver,
+            )
+        return complete_active_implementation(root)
     raise ValueError(f"Current TDD cycle phase {phase} is not supported yet")

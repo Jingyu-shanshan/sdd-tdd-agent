@@ -14,6 +14,10 @@ from sdd_tdd_agent.design_review import (
     reject_active_design,
 )
 from sdd_tdd_agent.feature_session import create_feature_session
+from sdd_tdd_agent.cycle_completion import (
+    CycleCompletionError,
+    ImplementationCompletionRun,
+)
 from sdd_tdd_agent.green_verification import (
     GreenVerificationError,
     GreenVerificationRun,
@@ -219,6 +223,7 @@ def main(
             RequirementAnalyzerError,
             RedExecutionError,
             GreenVerificationError,
+            CycleCompletionError,
             ProductionSourceWorkspaceError,
             TestSourceWorkspaceError,
         ) as error:
@@ -240,6 +245,12 @@ def main(
             output.write(
                 f"GREEN confirmed: {run.session_id} "
                 f"({run.test_id}; current test and full suite passed)\n"
+            )
+            return 0
+        if isinstance(run, ImplementationCompletionRun):
+            output.write(
+                f"Implementation ready for review: {run.session_id} "
+                f"({len(run.completed_tests)} tests GREEN)\n"
             )
             return 0
         output.write(

@@ -258,6 +258,20 @@ sources, and concurrent state updates preserve IMPLEMENT. GREEN verification
 is deterministic, invokes no model, and never treats production-source writing
 alone as proof that tests pass.
 
+On the next invocation after GREEN, `agent continue` checks the ordered plan.
+If another dependency-ready test remains, it clears all prior-cycle evidence
+and starts exactly that test through the same isolated WRITE_TEST generation
+path. If the completed prefix exhausts the plan, it revalidates both final
+source digests and the exact sanitized current/full-suite GREEN evidence, then
+atomically enters REVIEW without invoking a model or process runner:
+
+```text
+Implementation ready for review: feature-1 (1 tests GREEN)
+```
+
+Stale artifacts, incomplete plans, malformed evidence, concurrent state
+changes, or atomic collisions preserve GREEN for safe recovery.
+
 The cross-ecosystem execution planner builds tokenized one-test and full-suite
 commands for Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects
 using Jest, Vitest, or Angular CLI. Java uses fully qualified class/method

@@ -125,6 +125,11 @@ only when a failing acceptance test requires it.
   attributable current or regression failures return to RED with sanitized
   retry evidence, while infrastructure and concurrency failures preserve
   IMPLEMENT. This stage never invokes a model.
+- Advance GREEN deterministically from the ordered completed prefix. If a test
+  remains, clear every prior-cycle artifact and reuse isolated test-source
+  generation for exactly that next case. If the plan is exhausted, revalidate
+  final test/production digests and exact sanitized GREEN process evidence,
+  then atomically enter REVIEW with no model or process execution.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

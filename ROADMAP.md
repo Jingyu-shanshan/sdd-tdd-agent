@@ -42,7 +42,9 @@ and validate the core workflow; it is not the only planned ecosystem.
   IMPLEMENT state evidence.
 - Digest-bound GREEN verification and shell-free full-suite regression checks
   with separate timeouts, sanitized evidence, and safe RED recovery.
-- Review, refactor, and cycle completion.
+- Ordered GREEN cycle advancement and trustworthy exhausted-plan transition to
+  REVIEW.
+- Review and refactor completion.
 - Context isolation and state-machine recovery.
 
 ## v0.1.1: Agent provider and platform foundation

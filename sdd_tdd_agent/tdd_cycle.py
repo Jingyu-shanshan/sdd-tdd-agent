@@ -242,6 +242,8 @@ def _start_cycle(context: _CycleContext) -> TddCycleStart:
     context.state.pop("test_source", None)
     context.state.pop("red_evidence", None)
     context.state.pop("production_source", None)
+    context.state.pop("green_evidence", None)
+    context.state.pop("verification_failure", None)
     serialized = f"{json.dumps(context.state, indent=2)}\n"
     state_path = context.session_path / "state.json"
     temporary = context.session_path / ".state.json.tdd-cycle.tmp"
@@ -276,6 +278,11 @@ def load_current_test_case(
 def load_current_tdd_phase(root: Path, session_id: str) -> Optional[str]:
     """Load the validated active TDD phase, or None before a cycle starts."""
     return _load_cycle_context(root, session_id).active_phase
+
+
+def load_completed_test_ids(root: Path, session_id: str) -> Tuple[str, ...]:
+    """Load the validated ordered completed-test prefix for one Session."""
+    return _load_cycle_context(root, session_id).completed_tests
 
 
 def prepare_write_test_cycle(root: Path, session_id: str) -> TddCycleStart:

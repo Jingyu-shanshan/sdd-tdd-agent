@@ -63,6 +63,7 @@ class GreenVerificationRun:
 @dataclass(frozen=True)
 class _VerificationContext:
     session_id: str
+    expected_phase: str
     state_path: Path
     raw_state: str
     state: Dict[str, object]
@@ -125,6 +126,7 @@ def _production_digest(root: Path, artifact: ProductionSourceArtifact) -> str:
 def _load_context(
     root: Path,
     session_id: str,
+    expected_phase: str,
 ) -> _VerificationContext:
     if SESSION_ID_PATTERN.fullmatch(session_id) is None:
         raise GreenVerificationError("Invalid Session identifier")
@@ -132,8 +134,8 @@ def _load_context(
     raw_state = _read_state(state_path)
     state = _parse_state(raw_state)
     try:
-        case = load_current_test_case(root, session_id, "IMPLEMENT")
-        validate_current_test_source_artifact(root, session_id, "IMPLEMENT")
+        case = load_current_test_case(root, session_id, expected_phase)
+        validate_current_test_source_artifact(root, session_id, expected_phase)
     except (ValueError, RedExecutionError) as error:
         raise GreenVerificationError(str(error)) from error
     if _read_state(state_path) != raw_state:
@@ -147,6 +149,7 @@ def _load_context(
         raise GreenVerificationError("Session state changed concurrently")
     return _VerificationContext(
         session_id,
+        expected_phase,
         state_path,
         raw_state,
         state,
@@ -156,10 +159,19 @@ def _load_context(
 
 
 def _revalidate(root: Path, before: _VerificationContext) -> _VerificationContext:
-    after = _load_context(root, before.session_id)
+    after = _load_context(root, before.session_id, before.expected_phase)
     if after.raw_state != before.raw_state:
         raise GreenVerificationError("Session state changed concurrently")
     return after
+
+
+def validate_production_source_artifact(
+    root: Path,
+    session_id: str,
+    expected_phase: str,
+) -> ProductionSourceArtifact:
+    """Validate and return the production artifact for one explicit phase."""
+    return _load_context(root, session_id, expected_phase).production_source
 
 
 def _evidence(
@@ -254,7 +266,7 @@ def verify_active_implementation(
     if status.current_session is None:
         raise GreenVerificationError("Project has no active Session")
     session_id = status.current_session
-    before = _load_context(root, session_id)
+    before = _load_context(root, session_id, "IMPLEMENT")
     current = detect_test_command(root, before.case)
     suite = detect_full_test_command(root, before.case)
     current_timeout = load_test_command_timeout(root)
