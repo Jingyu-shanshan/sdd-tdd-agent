@@ -237,14 +237,33 @@ and SHA-256 and advances only RED to IMPLEMENT:
 Production source ready for GREEN: feature-1 (TC1 -> src/export.ts)
 ```
 
-The next invocation is reserved for GREEN verification; this production-source
-stage does not claim the test passes and does not invoke the test runner.
+On the fourth invocation, `agent continue` revalidates both recorded source
+digests, runs the exact current test first, and runs the complete suite only
+after that test passes. The suite uses its own required positive finite
+`full_test_suite_timeout_seconds`. Maven and Gradle run their unfiltered test
+tasks; Jest, Vitest, and Angular use non-watch full-suite arguments through the
+verified package-manager prefix.
 
-The cross-ecosystem execution planner builds tokenized one-test commands for
-Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects using Jest,
-Vitest, or Angular CLI. Java uses fully qualified class/method selectors. Node
-runners use one exact file plus an escaped and anchored test-name expression;
-Vitest and Angular watch behavior is disabled. Ambiguous lockfiles, conflicting
+Only two zero exits atomically append the current test to the completed plan
+prefix and advance IMPLEMENT to GREEN:
+
+```text
+GREEN confirmed: feature-1 (TC1; current test and full suite passed)
+```
+
+A trustworthy current-test failure or full-suite regression returns the cycle
+to RED with sanitized bounded retry evidence. Signals, timeouts, startup
+failures, no-test or invalid-option diagnostics, empty failures, changed
+sources, and concurrent state updates preserve IMPLEMENT. GREEN verification
+is deterministic, invokes no model, and never treats production-source writing
+alone as proof that tests pass.
+
+The cross-ecosystem execution planner builds tokenized one-test and full-suite
+commands for Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects
+using Jest, Vitest, or Angular CLI. Java uses fully qualified class/method
+selectors. Node runners use one exact file plus an escaped and anchored
+test-name expression; the suite plans contain no current-test filter. Vitest
+and Angular watch behavior is disabled. Ambiguous lockfiles, conflicting
 `packageManager` metadata, unverified frameworks, unsafe paths, and unsupported
 layouts fail explicitly.
 

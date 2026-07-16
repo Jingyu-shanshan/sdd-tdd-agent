@@ -7,6 +7,7 @@ from typing import Optional, Tuple
 import pytest
 
 from sdd_tdd_agent.cli import main
+from sdd_tdd_agent.green_verification import GreenVerificationRun
 from sdd_tdd_agent.implementation_command import continue_active_implementation
 from sdd_tdd_agent.model_adapter import ProcessResult
 from sdd_tdd_agent.production_source_adapter import ProductionSourceGeneratorError
@@ -61,6 +62,20 @@ class UnexpectedTestRunner:
         timeout_seconds: float,
     ) -> TestCommandProcessResult:
         raise AssertionError("Test runner must not be called during implementation")
+
+
+class PassingTestRunner:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def run(
+        self,
+        command: Tuple[str, ...],
+        cwd: Path,
+        timeout_seconds: float,
+    ) -> TestCommandProcessResult:
+        self.calls += 1
+        return TestCommandProcessResult(0, "passed\n", "")
 
 
 class NoWriteWriter:
@@ -209,17 +224,19 @@ def test_should_preserve_red_and_source_when_provider_fails(tmp_path: Path) -> N
     assert (tmp_path / "src" / "export.ts").read_text() == PRODUCTION_CONTENT
 
 
-def test_should_reject_continue_during_implement_without_model_call(
+def test_should_verify_green_during_implement_without_second_model_call(
     tmp_path: Path,
 ) -> None:
     create_red_workspace(tmp_path)
     runner = ProductionRunner()
     continue_active_implementation(tmp_path, runner, UnexpectedTestRunner())
+    test_runner = PassingTestRunner()
 
-    with pytest.raises(ValueError, match="IMPLEMENT"):
-        continue_active_implementation(tmp_path, runner, UnexpectedTestRunner())
+    run = continue_active_implementation(tmp_path, runner, test_runner)
 
+    assert isinstance(run, GreenVerificationRun)
     assert runner.calls == 1
+    assert test_runner.calls == 2
 
 
 def test_should_reject_missing_active_session(tmp_path: Path) -> None:

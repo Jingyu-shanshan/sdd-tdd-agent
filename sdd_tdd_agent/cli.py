@@ -14,6 +14,10 @@ from sdd_tdd_agent.design_review import (
     reject_active_design,
 )
 from sdd_tdd_agent.feature_session import create_feature_session
+from sdd_tdd_agent.green_verification import (
+    GreenVerificationError,
+    GreenVerificationRun,
+)
 from sdd_tdd_agent.implementation_command import continue_active_implementation
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
@@ -214,6 +218,7 @@ def main(
             ValueError,
             RequirementAnalyzerError,
             RedExecutionError,
+            GreenVerificationError,
             ProductionSourceWorkspaceError,
             TestSourceWorkspaceError,
         ) as error:
@@ -229,6 +234,12 @@ def main(
             output.write(
                 "Production source ready for GREEN: "
                 f"{run.session_id} ({run.test_id} -> {run.file_path})\n"
+            )
+            return 0
+        if isinstance(run, GreenVerificationRun):
+            output.write(
+                f"GREEN confirmed: {run.session_id} "
+                f"({run.test_id}; current test and full suite passed)\n"
             )
             return 0
         output.write(

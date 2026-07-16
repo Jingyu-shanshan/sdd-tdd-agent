@@ -4,6 +4,7 @@ from typing import Optional
 
 
 TIMEOUT_KEY = "test_command_timeout_seconds"
+FULL_SUITE_TIMEOUT_KEY = "full_test_suite_timeout_seconds"
 
 
 class TestExecutionConfigurationError(ValueError):
@@ -12,8 +13,7 @@ class TestExecutionConfigurationError(ValueError):
     __test__ = False
 
 
-def load_test_command_timeout(root: Path) -> float:
-    """Load one explicit positive finite test-command timeout."""
+def _load_timeout(root: Path, key_name: str, label: str) -> float:
     path = root / ".agent" / "config.yml"
     timeout: Optional[float] = None
     found = False
@@ -28,24 +28,34 @@ def load_test_command_timeout(root: Path) -> float:
         if not value or value.startswith("#") or line[0].isspace():
             continue
         key, separator, scalar = value.partition(":")
-        if key != TIMEOUT_KEY:
+        if key != key_name:
             continue
         if found or not separator or not scalar.strip():
-            raise TestExecutionConfigurationError("Invalid test command timeout config")
+            raise TestExecutionConfigurationError(f"Invalid {label} timeout config")
         found = True
         try:
             timeout = float(scalar.strip())
         except ValueError as error:
             raise TestExecutionConfigurationError(
-                "Invalid test command timeout config"
+                f"Invalid {label} timeout config"
             ) from error
     if timeout is None:
         raise TestExecutionConfigurationError(
-            "Test command configuration is incomplete; add "
-            "test_command_timeout_seconds to .agent/config.yml"
+            f"{label.capitalize()} configuration is incomplete; add "
+            f"{key_name} to .agent/config.yml"
         )
     if not math.isfinite(timeout) or timeout <= 0:
         raise TestExecutionConfigurationError(
-            "Test command timeout must be a positive finite number"
+            f"{label.capitalize()} timeout must be a positive finite number"
         )
     return timeout
+
+
+def load_test_command_timeout(root: Path) -> float:
+    """Load one explicit positive finite current-test timeout."""
+    return _load_timeout(root, TIMEOUT_KEY, "test command")
+
+
+def load_full_test_suite_timeout(root: Path) -> float:
+    """Load one explicit positive finite full-suite timeout."""
+    return _load_timeout(root, FULL_SUITE_TIMEOUT_KEY, "full test suite")

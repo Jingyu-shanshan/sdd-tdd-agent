@@ -34,6 +34,18 @@ class TestCommandPlan:
     command: Tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class FullTestCommandPlan:
+    """One shell-free command plan for executing the complete test suite."""
+
+    __test__: ClassVar[bool] = False
+
+    ecosystem: str
+    build_tool: str
+    test_framework: str
+    command: Tuple[str, ...]
+
+
 def _test_path(value: object) -> PurePosixPath:
     if not isinstance(value, str) or not value.strip() or "\0" in value:
         raise TestCommandDetectionError("Test file must be a safe relative path")
@@ -189,3 +201,30 @@ def detect_test_command(root: Path, case: TestCasePlan) -> TestCommandPlan:
     if suffix in NODE_TEST_SUFFIXES:
         return _node_plan(root, case, name)
     raise TestCommandDetectionError("Test file extension is unsupported")
+
+
+def detect_full_test_command(
+    root: Path,
+    case: TestCasePlan,
+) -> FullTestCommandPlan:
+    """Detect a tokenized command for the project's complete test suite."""
+    current = detect_test_command(root, case)
+    if current.build_tool == "maven":
+        command = _wrapper(root, "mvnw", "mvn") + ("test",)
+    elif current.build_tool == "gradle":
+        command = _wrapper(root, "gradlew", "gradle") + ("test",)
+    else:
+        arguments = {
+            "jest": ("--runInBand",),
+            "vitest": ("--run",),
+            "angular": ("--watch=false",),
+        }.get(current.test_framework)
+        if arguments is None:
+            raise TestCommandDetectionError("Node test framework is unsupported")
+        command = _script_prefix(current.build_tool) + arguments
+    return FullTestCommandPlan(
+        current.ecosystem,
+        current.build_tool,
+        current.test_framework,
+        command,
+    )

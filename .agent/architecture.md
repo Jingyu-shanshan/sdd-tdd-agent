@@ -118,6 +118,13 @@ only when a failing acceptance test requires it.
   while transitioning RED to IMPLEMENT. Never expose SDD documents, the full
   plan, future tests, configuration, raw Session state, or direct project tool
   access to the Blind model.
+- Verify IMPLEMENT through two deterministic shell-free gates: the exact
+  digest-bound current test and then an unfiltered full suite with a separate
+  required timeout. Revalidate test, production, and Session state around both
+  processes. Only two zero exits append the current test and enter GREEN;
+  attributable current or regression failures return to RED with sanitized
+  retry evidence, while infrastructure and concurrency failures preserve
+  IMPLEMENT. This stage never invokes a model.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

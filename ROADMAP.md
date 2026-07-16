@@ -40,8 +40,9 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Minimal one-file production-code generation through isolated Blind JSON/Codex
   adapters, strict `src/**` policy, optimistic atomic writing, and RED to
   IMPLEMENT state evidence.
-- GREEN verification, full-suite regression checks, review, refactor, and cycle
-  completion.
+- Digest-bound GREEN verification and shell-free full-suite regression checks
+  with separate timeouts, sanitized evidence, and safe RED recovery.
+- Review, refactor, and cycle completion.
 - Context isolation and state-machine recovery.
 
 ## v0.1.1: Agent provider and platform foundation

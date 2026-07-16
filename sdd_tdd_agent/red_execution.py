@@ -315,17 +315,33 @@ def _has_current_identity(output: str, case: TestCasePlan) -> bool:
     return any(identity and identity in normalized for identity in identities)
 
 
-def _validate_failure(result: TestCommandProcessResult, case: TestCasePlan) -> None:
+def _validate_process_failure(result: TestCommandProcessResult) -> str:
     if result.returncode == 0:
-        raise RedExecutionError("Current test passed before implementation")
+        raise RedExecutionError("Test command did not fail")
     if result.returncode < 0:
         raise RedExecutionError("Test command was terminated by a signal")
     output = f"{result.stdout}\n{result.stderr}"
     folded = output.casefold()
     if any(marker in folded for marker in INVALID_FAILURE_MARKERS):
-        raise RedExecutionError("Test command did not execute the current test")
-    if not output.strip() or not _has_current_identity(output, case):
+        raise RedExecutionError("Test command did not execute tests")
+    if not output.strip():
+        raise RedExecutionError("Test command failure output is empty")
+    return output
+
+
+def validate_current_test_failure(
+    result: TestCommandProcessResult,
+    case: TestCasePlan,
+) -> None:
+    """Reject a failure that cannot be attributed to the current test."""
+    output = _validate_process_failure(result)
+    if not _has_current_identity(output, case):
         raise RedExecutionError("Test failure could not be attributed to current test")
+
+
+def validate_test_suite_failure(result: TestCommandProcessResult) -> None:
+    """Reject a full-suite failure that lacks trustworthy test execution evidence."""
+    _validate_process_failure(result)
 
 
 def _remove_control_characters(value: str) -> str:
@@ -360,7 +376,7 @@ def execute_current_test_for_red(
     before = _validate_artifact(root, session_id, "WRITE_TEST")
     plan = detect_test_command(root, before.case)
     result = runner.run(plan.command, root.resolve(), timeout_seconds)
-    _validate_failure(result, before.case)
+    validate_current_test_failure(result, before.case)
     after = _validate_artifact(root, session_id, "WRITE_TEST")
     if after.raw_state != before.raw_state:
         raise RedExecutionError("Session state changed concurrently")

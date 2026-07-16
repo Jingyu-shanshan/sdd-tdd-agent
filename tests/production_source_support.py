@@ -81,6 +81,7 @@ requirement_analyzer_command:
   - "codex"
 requirement_analyzer_timeout_seconds: 30
 test_command_timeout_seconds: 15
+full_test_suite_timeout_seconds: 60
 """,
         encoding="utf-8",
     )
