@@ -46,7 +46,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   REVIEW.
 - Deterministic digest-bound implementation audit report and REVIEW to REFACTOR
   transition.
-- Refactor completion and final verification.
+- Deterministic no-source-change refactor verification with current-test and
+  full-suite gates, immutable audit-chain checks, and atomic REFACTOR to DONE.
 - Context isolation and state-machine recovery.
 
 ## v0.1.1: Agent provider and platform foundation

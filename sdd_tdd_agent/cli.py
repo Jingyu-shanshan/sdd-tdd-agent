@@ -62,6 +62,10 @@ from sdd_tdd_agent.red_execution import (
     SystemTestCommandRunner,
     TestCommandRunner,
 )
+from sdd_tdd_agent.refactor_completion import (
+    RefactorVerificationError,
+    complete_active_refactor,
+)
 from sdd_tdd_agent.test_source_workspace import TestSourceWorkspaceError
 from sdd_tdd_agent.provider_registry import (
     list_providers,
@@ -128,6 +132,19 @@ def main(
             f"Implementation review passed: {run.session_id} "
             f"({run.completed_test_count} tests; final {run.final_test_id}; "
             "ready for REFACTOR)\n"
+        )
+        return 0
+
+    if arguments == ["refactor"]:
+        command_runner = test_runner or SystemTestCommandRunner()
+        try:
+            run = complete_active_refactor(project_root, command_runner)
+        except (RefactorVerificationError, RedExecutionError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Refactor verification complete: {run.session_id} "
+            f"({run.completed_test_count} tests; DONE)\n"
         )
         return 0
 

@@ -286,6 +286,21 @@ source or process output—then atomically enters REFACTOR. It invokes no model,
 test runner, or shell command. The report explicitly marks semantic automated
 code review as deferred to v0.3 instead of claiming uncomputed findings.
 
+Finish the v0.1 workflow with deterministic refactor verification:
+
+```bash
+uv run agent refactor
+```
+
+This command implements the honest v0.1 refactor contract: it makes no source
+change and invokes no model. It revalidates the complete review, completion,
+GREEN-evidence, and final-source digest chain, reruns the recorded current test
+and then the recorded unfiltered suite with separate timeouts, and requires two
+zero exits. It stores only sanitized bounded final evidence and atomically
+enters DONE. Any failed process, changed source or state, stale record, unsafe
+path, or concurrent update preserves REFACTOR. Automated behavior-preserving
+source refactoring remains planned for v0.3.
+
 The cross-ecosystem execution planner builds tokenized one-test and full-suite
 commands for Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects
 using Jest, Vitest, or Angular CLI. Java uses fully qualified class/method

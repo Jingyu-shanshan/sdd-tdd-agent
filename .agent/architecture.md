@@ -135,6 +135,12 @@ only when a failing acceptance test requires it.
   writes a deterministic source/output-free audit report, records its digest,
   and enters REFACTOR without external execution. State clearly that semantic
   automated code review remains a later milestone.
+- Complete v0.1 REFACTOR without claiming automated source improvement.
+  `agent refactor` validates the complete report/completion/GREEN/source digest
+  chain around each process, reruns the exact current test followed by the
+  unfiltered suite under separate timeouts, stores only sanitized bounded
+  evidence, and atomically enters DONE after two zero exits. It invokes no model
+  and writes no source; behavior-preserving automated refactoring remains v0.3.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
