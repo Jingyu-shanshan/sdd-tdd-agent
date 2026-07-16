@@ -8,7 +8,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Project initialization and status.
 - Maven and Gradle project detection.
 - JUnit 5 detection and incremental test execution.
-- Feature and bug sessions.
+- Feature and bug Sessions with shared safe creation, activation, and downstream
+  workflow compatibility.
 - Explicit human requirement review with approve/reject transitions.
 - Typed design generation with JSON/Codex adapters that stops for human design
   review.

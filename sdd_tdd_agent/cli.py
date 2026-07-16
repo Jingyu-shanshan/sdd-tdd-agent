@@ -6,6 +6,7 @@ from sdd_tdd_agent.analyze_command import (
     analyze_active_requirement,
     load_analyzer_config,
 )
+from sdd_tdd_agent.bug_session import create_bug_session
 from sdd_tdd_agent.design_command import generate_active_design
 from sdd_tdd_agent.design_review import (
     DesignReviewError,
@@ -120,6 +121,12 @@ def main(
         description = " ".join(arguments[1:])
         session = create_feature_session(project_root, description)
         output.write(f"Created feature session: {session.session_id}\n")
+        return 0
+
+    if arguments and arguments[0] == "bug":
+        description = " ".join(arguments[1:])
+        session = create_bug_session(project_root, description)
+        output.write(f"Created bug session: {session.session_id}\n")
         return 0
 
     if arguments == ["review"]:

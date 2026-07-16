@@ -31,6 +31,10 @@ only when a failing acceptance test requires it.
   CLI dispatch. Validate session identifiers before resolving state paths.
 - Create feature sessions exclusively with immutable typed results, pending SDD
   templates, safe generated IDs, and atomic active-session metadata updates.
+- Create bug Sessions through the same internal Session-creation service and
+  standard eight-artifact contract while exposing a distinct typed result and
+  `agent bug` entry point. Downstream workflows remain kind-neutral and retain
+  the recorded `feature` or `bug` kind.
 - Isolate requirement-analysis models behind an injected typed Protocol. Load
   versioned Prompts from packaged files, validate all structured output before
   mutation, and require human review before DESIGN.

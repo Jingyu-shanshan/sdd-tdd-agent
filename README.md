@@ -52,6 +52,18 @@ uv run agent feature "Support PDF export"
 The command records the request, creates the eight standard session artifacts,
 sets the workflow state to `ANALYSIS`, and activates the new Session.
 
+Start a bug-fix SDD session through the same workflow with:
+
+```bash
+uv run agent bug "Fix empty PDF export"
+```
+
+The bug command applies the same normalization, safe unique-ID, exclusive
+creation, complete artifact, and atomic activation contract, while recording
+`kind: bug`. Invalid or colliding input cannot replace the active Session.
+After creation, use the same `analyze`, explicit review, design, task, test, and
+incremental implementation commands as a feature Session.
+
 The requirement-analysis core provides a typed, dependency-injected
 `RequirementAnalyzer` boundary. It loads the versioned Prompt and project
 context, validates structured output, writes reviewable requirements, and stops
