@@ -255,10 +255,14 @@ def _artifact_from_state(value: object) -> TestSourceArtifact:
     return TestSourceArtifact(test_id, file_path, digest)
 
 
-def _validate_artifact(root: Path, session_id: str) -> _ArtifactContext:
+def _validate_artifact(
+    root: Path,
+    session_id: str,
+    expected_phase: str,
+) -> _ArtifactContext:
     state_path = _state_path(root, session_id)
     raw_state = _read_state_text(state_path)
-    case = load_current_test_case(root, session_id, "WRITE_TEST")
+    case = load_current_test_case(root, session_id, expected_phase)
     if _read_state_text(state_path) != raw_state:
         raise RedExecutionError("Session state changed concurrently")
     state = _load_state(state_path, raw_state)
@@ -279,8 +283,24 @@ def is_current_test_source_recorded(root: Path, session_id: str) -> bool:
     state = _load_state(state_path, raw_state)
     if "test_source" not in state:
         return False
-    _validate_artifact(root, session_id)
+    _validate_artifact(root, session_id, "WRITE_TEST")
     return True
+
+
+def has_test_source_artifact_record(root: Path, session_id: str) -> bool:
+    """Return whether Session state contains any test-source artifact record."""
+    state_path = _state_path(root, session_id)
+    state = _load_state(state_path, _read_state_text(state_path))
+    return "test_source" in state
+
+
+def validate_current_test_source_artifact(
+    root: Path,
+    session_id: str,
+    expected_phase: str,
+) -> TestSourceArtifact:
+    """Validate and return the digest-bound current test source artifact."""
+    return _validate_artifact(root, session_id, expected_phase).artifact
 
 
 def _has_current_identity(output: str, case: TestCasePlan) -> bool:
@@ -316,7 +336,8 @@ def _remove_control_characters(value: str) -> str:
     )
 
 
-def _sanitize_stream(root: Path, value: str) -> str:
+def sanitize_test_evidence(root: Path, value: str) -> str:
+    """Remove sensitive and unsafe content from one persisted test stream."""
     sanitized = ANSI_PATTERN.sub("", value)
     sanitized = _remove_control_characters(sanitized)
     resolved = str(root.resolve())
@@ -336,11 +357,11 @@ def execute_current_test_for_red(
     """Execute one digest-bound current test and atomically record trusted RED."""
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise RedExecutionError("Test command timeout must be positive and finite")
-    before = _validate_artifact(root, session_id)
+    before = _validate_artifact(root, session_id, "WRITE_TEST")
     plan = detect_test_command(root, before.case)
     result = runner.run(plan.command, root.resolve(), timeout_seconds)
     _validate_failure(result, before.case)
-    after = _validate_artifact(root, session_id)
+    after = _validate_artifact(root, session_id, "WRITE_TEST")
     if after.raw_state != before.raw_state:
         raise RedExecutionError("Session state changed concurrently")
     progress = after.state.get("tdd_cycle")
@@ -352,8 +373,8 @@ def execute_current_test_for_red(
         "file_path": after.case.test_file,
         "command": list(plan.command),
         "returncode": result.returncode,
-        "stdout": _sanitize_stream(root, result.stdout),
-        "stderr": _sanitize_stream(root, result.stderr),
+        "stdout": sanitize_test_evidence(root, result.stdout),
+        "stderr": sanitize_test_evidence(root, result.stderr),
     }
     if _read_state_text(after.state_path) != after.raw_state:
         raise RedExecutionError("Session state changed concurrently")

@@ -37,7 +37,9 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Digest-bound, shell-free one-failing-test-at-a-time RED execution with
   attributable failure checks, sanitized bounded evidence, and recoverable
   state transitions.
-- Minimal production-code generation and isolated Blind implementation context.
+- Minimal one-file production-code generation through isolated Blind JSON/Codex
+  adapters, strict `src/**` policy, optimistic atomic writing, and RED to
+  IMPLEMENT state evidence.
 - GREEN verification, full-suite regression checks, review, refactor, and cycle
   completion.
 - Context isolation and state-machine recovery.
@@ -81,7 +83,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 ### TypeScript foundation
 
 - Root package-manager and Jest/Vitest test-command detection plus generic
-  digest-bound RED execution/state orchestration are implemented.
+  digest-bound RED execution and Blind minimal production-source orchestration
+  are implemented.
 - Detect TypeScript projects from project metadata and configuration files.
 - Detect npm, pnpm, and yarn without assuming a package manager.
 - Detect and invoke the project's configured Jest or Vitest commands.
@@ -92,8 +95,9 @@ and validate the core workflow; it is not the only planned ecosystem.
 ### Angular adapter
 
 - Root Angular workspace detection, exact non-watch file/name command planning,
-  and generic RED execution are implemented; Angular-specific generation and
-  broader testing coverage continue in this milestone.
+  generic RED execution, and Blind `src/**` production generation are
+  implemented; Angular-specific context conventions and broader testing
+  coverage continue in this milestone.
 - Detect Angular workspaces and applications from their project metadata.
 - Capture Angular architecture constraints in SDD design documents.
 - Support incremental tests for components, services, directives, pipes,

@@ -26,6 +26,8 @@ from sdd_tdd_agent.platform_contract import (
     SystemPlatformEnvironment,
     render_platform_diagnostic,
 )
+from sdd_tdd_agent.production_source_command import ProductionSourceCommandRun
+from sdd_tdd_agent.production_source_workspace import ProductionSourceWorkspaceError
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
 from sdd_tdd_agent.requirement_review import (
@@ -212,6 +214,7 @@ def main(
             ValueError,
             RequirementAnalyzerError,
             RedExecutionError,
+            ProductionSourceWorkspaceError,
             TestSourceWorkspaceError,
         ) as error:
             error_output.write(f"Error: {error}\n")
@@ -220,6 +223,12 @@ def main(
             output.write(
                 f"RED confirmed: {run.session_id} "
                 f"({run.test_id}, exit {run.returncode})\n"
+            )
+            return 0
+        if isinstance(run, ProductionSourceCommandRun):
+            output.write(
+                "Production source ready for GREEN: "
+                f"{run.session_id} ({run.test_id} -> {run.file_path})\n"
             )
             return 0
         output.write(

@@ -181,8 +181,8 @@ The implementation-cycle core then selects exactly one incomplete test in plan
 order and atomically records `WRITE_TEST` progress. Completed tests must form a
 plan prefix and all dependencies must already be GREEN. Its typed Blind
 development context exposes only the current test, explicitly supplied
-production snapshots, and compile/test output—never requirements, design,
-tasks, or future tests.
+test source, production snapshots, and compile/test output—never requirements,
+design, tasks, the complete plan, or future tests.
 
 The single-test generation core uses a separate Test Context: it may see the
 approved requirement/design, exactly one current test case, and explicitly
@@ -218,6 +218,27 @@ are length-bounded. A successful RED transition reports, for example:
 ```text
 RED confirmed: feature-1 (TC1, exit 1)
 ```
+
+On the third invocation, `agent continue` builds the Blind development context
+from that digest-bound current test, visible production source, and sanitized
+RED stderr/stdout (mapped to compile/test output). The selected Provider must
+return the complete content of exactly one minimal production file. Strict JSON
+and isolated ephemeral read-only Codex adapters never receive requirement,
+design, task, complete-plan, future-test, or raw Session content.
+
+The writer permits only normalized supported source files below `src/` and
+rejects test-like paths, configuration/build files, hidden paths, traversal,
+symbolic links, stale targets, invalid UTF-8, and temporary collisions. Existing
+source is replaced only if its captured content is unchanged; one safe new
+source may be created. Success atomically records the production file ID, path,
+and SHA-256 and advances only RED to IMPLEMENT:
+
+```text
+Production source ready for GREEN: feature-1 (TC1 -> src/export.ts)
+```
+
+The next invocation is reserved for GREEN verification; this production-source
+stage does not claim the test passes and does not invoke the test runner.
 
 The cross-ecosystem execution planner builds tokenized one-test commands for
 Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects using Jest,

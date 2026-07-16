@@ -109,6 +109,15 @@ only when a failing acceptance test requires it.
   signal, timeout, command/configuration, no-test, unrelated-output, and
   concurrent-change outcomes recoverable in WRITE_TEST. Persist only sanitized,
   bounded stdout/stderr and the exact tokenized command in Session state.
+- Generate minimal production code behind a separate Blind typed boundary that
+  receives only the digest-bound current test plan/source, visible production
+  snapshots, sanitized stderr as compile output, and sanitized stdout as test
+  output. Run Codex from an ephemeral project-external directory and require an
+  exact one-file result. Restrict writes to normalized non-test `src/**` source,
+  use optimistic-concurrency atomic replacement, and record only ID/path/digest
+  while transitioning RED to IMPLEMENT. Never expose SDD documents, the full
+  plan, future tests, configuration, raw Session state, or direct project tool
+  access to the Blind model.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from
