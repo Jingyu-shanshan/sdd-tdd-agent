@@ -376,6 +376,12 @@ the repository quality suite on explicit Ubuntu 24.04 workers with Python 3.9,
 through both Bash and Zsh. This hosted coverage validates Linux portability; it
 does not relabel Ubuntu as Linux Mint.
 
+The separate **Toolchain fixtures** workflow executes real minimal projects on
+Ubuntu rather than stopping at mocked process runners. Its matrix runs Maven
+and Gradle with JUnit Jupiter, plus npm, pnpm, and Yarn with locked Vitest
+TypeScript fixtures. The commands are the same full-suite commands produced by
+the Agent's shell-free planners.
+
 Real Linux Mint validation is deliberately separate and manual. Register a
 self-hosted GitHub Actions runner with the labels `self-hosted`, `linux`, `x64`,
 and `linuxmint`, then dispatch the **Linux Mint validation** workflow. The job

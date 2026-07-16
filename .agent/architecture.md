@@ -173,6 +173,9 @@ only when a failing acceptance test requires it.
   injected resolvers, prefer PATH or explicit configuration, and validate
   subprocess, permission, temporary-file, signal, and toolchain behavior in a
   Linux CI matrix.
+- Keep real multi-toolchain acceptance fixtures isolated under test data. Their
+  Maven, Gradle, npm, pnpm, and Yarn metadata must be accepted by the same
+  production detectors and their CI commands must match production plans.
 - Model host detection as an injected read-only Platform Environment. On Linux,
   parse only standard `os-release` identifiers, reject malformed/duplicate
   fields, and classify `ID=linuxmint` as the formal target while reporting other

@@ -90,8 +90,9 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Keep executable-permission, temporary-path, signal, timeout, and child-process
   contracts in the Linux-hosted suite and expand them with real-host failures as
   evidence becomes available.
-- Run existing Maven/Gradle and npm/pnpm/yarn planning and execution contracts
-  on Linux; add real multi-toolchain fixture projects in a later increment.
+- Run existing Maven/Gradle and npm/pnpm/yarn planning contracts on Linux and
+  execute locked minimal JUnit/Vitest fixture projects through all five real
+  toolchains on Ubuntu CI.
 - Keep platform-specific executable fallbacks isolated behind typed resolvers.
 
 ## v0.2: TypeScript and Angular
