@@ -8,6 +8,8 @@ Approved for the Linux CI foundation.
   shell matrices.
 - All external Actions are pinned to full verified commits and workflows expose
   only read access to repository contents.
+- The uv runtime is fixed explicitly, avoiding dynamic latest-version manifest
+  discovery during setup.
 - Linux Mint cannot be inferred from Ubuntu: its manual workflow needs an exact
   custom runner label and exact Platform Doctor evidence.
 - The self-hosted job does not install system packages or persist an uv cache.

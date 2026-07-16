@@ -13,6 +13,8 @@ moving without routine approval pauses.
 - Run Ruff lint, Ruff format validation, Pyright, pytest with coverage, and a
   package build in CI.
 - Pin every external GitHub Action to a verified immutable commit.
+- Pin the uv runtime version so setup does not depend on dynamic latest-version
+  discovery.
 - Use least-privilege workflow permissions.
 - Add a manual Linux Mint workflow targeting a real, explicitly labelled
   self-hosted runner.

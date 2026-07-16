@@ -74,3 +74,10 @@ def test_should_require_a_manual_real_linux_mint_runner() -> None:
     assert "apt-get" not in workflow
     _assert_quality_commands(workflow)
     _assert_immutable_actions(workflow)
+
+
+def test_should_pin_the_uv_runtime_version() -> None:
+    for name in ("ci.yml", "linux-mint.yml"):
+        workflow = _read_workflow(name)
+
+        assert 'version: "0.11.29"' in workflow
