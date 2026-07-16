@@ -82,9 +82,16 @@ and validate the core workflow; it is not the only planned ecosystem.
   changing the host environment.
 - Resolve provider executables from PATH or explicit configuration without
   silently installing tools or changing environment variables.
-- Test Python 3.9, 3.10, and 3.12; Bash and Zsh; executable permissions;
-  temporary paths; signals; timeouts; and child-process cleanup.
-- Add CI coverage for Maven/Gradle and npm/pnpm/yarn workflows on Linux.
+- Run the quality suite automatically on explicit Ubuntu 24.04 workers with
+  Python 3.9, 3.10, and 3.12, plus Bash and Zsh test entry points.
+- Provide a manual, label-constrained workflow for a real Linux Mint
+  self-hosted runner. The target remains pending real-host validation until
+  that workflow records a successful run.
+- Keep executable-permission, temporary-path, signal, timeout, and child-process
+  contracts in the Linux-hosted suite and expand them with real-host failures as
+  evidence becomes available.
+- Run existing Maven/Gradle and npm/pnpm/yarn planning and execution contracts
+  on Linux; add real multi-toolchain fixture projects in a later increment.
 - Keep platform-specific executable fallbacks isolated behind typed resolvers.
 
 ## v0.2: TypeScript and Angular

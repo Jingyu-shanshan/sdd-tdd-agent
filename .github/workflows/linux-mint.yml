@@ -1,0 +1,39 @@
+name: Linux Mint validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-mint:
+    name: Real Linux Mint host
+    runs-on: [self-hosted, linux, x64, linuxmint]
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          python-version: "3.12"
+          enable-cache: false
+      - name: Synchronize locked dependencies
+        run: uv sync --locked --dev
+      - name: Verify real Linux Mint host readiness
+        run: |
+          uv run agent platform doctor > "$RUNNER_TEMP/platform-doctor.txt"
+          grep --fixed-strings --line-regexp "Distribution: linuxmint" "$RUNNER_TEMP/platform-doctor.txt"
+          grep --fixed-strings --line-regexp "Platform support: supported-target" "$RUNNER_TEMP/platform-doctor.txt"
+          grep --fixed-strings --line-regexp "Readiness: ready" "$RUNNER_TEMP/platform-doctor.txt"
+      - name: Check lint
+        run: uv run ruff check .
+      - name: Check formatting
+        run: uv run ruff format --check .
+      - name: Check types
+        run: uv run pyright
+      - name: Run tests
+        run: uv run pytest
+      - name: Build distribution
+        run: uv build

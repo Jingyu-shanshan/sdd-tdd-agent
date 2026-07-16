@@ -370,10 +370,20 @@ CLI, structured-output, authentication, and licensing contracts have dedicated
 Adapters and contract tests. Every workflow run continues to use exactly one
 selected Provider.
 
-macOS and Linux Mint are target platforms. Linux Mint support will be validated
-through a formal Python, shell, subprocess, permission, timeout, Java, and
-TypeScript toolchain matrix described in `ROADMAP.md`; the CLI will not silently
-install provider tools or mutate PATH.
+macOS and Linux Mint are target platforms. Every push and pull request now runs
+the repository quality suite on explicit Ubuntu 24.04 workers with Python 3.9,
+3.10, and 3.12. A separate compatibility job invokes the complete test suite
+through both Bash and Zsh. This hosted coverage validates Linux portability; it
+does not relabel Ubuntu as Linux Mint.
+
+Real Linux Mint validation is deliberately separate and manual. Register a
+self-hosted GitHub Actions runner with the labels `self-hosted`, `linux`, `x64`,
+and `linuxmint`, then dispatch the **Linux Mint validation** workflow. The job
+requires `agent platform doctor` to report the exact Linux Mint distribution,
+the `supported-target` classification, and `ready` status before running all
+quality gates. No host packages are installed by that workflow. Until a matching
+runner completes it successfully, Linux Mint remains a supported target with
+pending real-host CI evidence.
 
 Inspect host identity and minimum runtime readiness without changing the project:
 
