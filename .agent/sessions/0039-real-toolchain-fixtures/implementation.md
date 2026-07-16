@@ -56,3 +56,17 @@ The `.gitignore` audit found that Node `node_modules`, Yarn linker state, PnP,
 and unplugged/build-state outputs needed repository rules. Those localized rules
 were added; all installed fixture artifacts are now ignored while package
 metadata, sources, and lockfiles remain tracked.
+
+## Cycle 5: Gradle JUnit launcher
+
+Status: GREEN complete; corrective hosted run follows.
+
+The first hosted run passed Maven, npm, pnpm, and Yarn. Gradle 9.6.1 compiled
+both Java source sets but failed `:test` because the runtime classpath did not
+contain JUnit Platform Launcher. A focused regression contract now requires the
+launcher at the same 6.1.2 version as JUnit Jupiter.
+
+The focused launcher contract failed before implementation. Adding one
+`testRuntimeOnly` dependency made all nine focused cases pass. The complete
+suite now has 674 passing cases at 93.78% coverage, with Ruff, format, Pyright,
+workflow YAML, and diff checks also passing.
