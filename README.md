@@ -6,9 +6,10 @@ contexts.
 
 ## Current capabilities
 
-The current slices provide a working CLI, project/session workspace,
-requirement-analysis workflow, typed model adapters, and provider selection
-while preserving the specification and incremental TDD record structure.
+The current v0.1 core provides a working public CLI from project/session setup
+through requirement, design, task, and test-plan approval gates; isolated
+incremental TDD implementation; deterministic review; final verification; and
+DONE. Model and target-process boundaries remain typed, injected, and testable.
 
 ```bash
 uv run agent hello
@@ -300,6 +301,14 @@ zero exits. It stores only sanitized bounded final evidence and atomically
 enters DONE. Any failed process, changed source or state, stale record, unsafe
 path, or concurrent update preserves REFACTOR. Automated behavior-preserving
 source refactoring remains planned for v0.3.
+
+The complete public-CLI sequence is covered by an isolated end-to-end
+acceptance test using a fresh detected TypeScript/Vitest project. It verifies
+every state transition, explicit human gate, Blind production context, exact
+RED/current/full-suite command ordering, separate timeouts, audit records, and
+the final DONE transition without invoking a real model, package manager, or
+network service. Focused tests independently cover Java/JUnit, Angular CLI,
+Jest, Vitest, Maven, Gradle, npm, pnpm, and yarn planning and recovery behavior.
 
 The cross-ecosystem execution planner builds tokenized one-test and full-suite
 commands for Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects

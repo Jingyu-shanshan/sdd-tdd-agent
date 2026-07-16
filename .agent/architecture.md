@@ -141,6 +141,11 @@ only when a failing acceptance test requires it.
   unfiltered suite under separate timeouts, stores only sanitized bounded
   evidence, and atomically enters DONE after two zero exits. It invokes no model
   and writes no source; behavior-preserving automated refactoring remains v0.3.
+- Prove the integrated core with a public-CLI acceptance test in a fresh
+  detected project. All model and target-process effects stay behind injected
+  typed runners, so the test exercises every human gate and state transition
+  from initialization through DONE without network, package-manager, or host
+  execution. Keep ecosystem-specific failure depth in focused contract tests.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

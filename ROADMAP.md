@@ -48,6 +48,8 @@ and validate the core workflow; it is not the only planned ecosystem.
   transition.
 - Deterministic no-source-change refactor verification with current-test and
   full-suite gates, immutable audit-chain checks, and atomic REFACTOR to DONE.
+- Full public-CLI acceptance coverage from initialization through DONE with
+  injected model/test runners and explicit human approval gates.
 - Context isolation and state-machine recovery.
 
 ## v0.1.1: Agent provider and platform foundation
