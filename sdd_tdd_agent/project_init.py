@@ -11,6 +11,7 @@ max_compile_failures: 5
 max_test_failures: 5
 max_refactor_iterations: 3
 max_duration_minutes: 30
+test_command_timeout_seconds: 300
 """
 
 ARCHITECTURE = """# Architecture

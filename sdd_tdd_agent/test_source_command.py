@@ -1,7 +1,7 @@
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import ClassVar, Optional
 
 from sdd_tdd_agent.analyze_command import ActiveSessionError, load_analyzer_config
 from sdd_tdd_agent.model_adapter import (
@@ -10,6 +10,7 @@ from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
 )
 from sdd_tdd_agent.project_status import load_project_status
+from sdd_tdd_agent.red_execution import record_test_source_artifact
 from sdd_tdd_agent.tdd_cycle import prepare_write_test_cycle
 from sdd_tdd_agent.test_source_adapter import (
     CodexExecTestSourceGenerator,
@@ -31,6 +32,8 @@ from sdd_tdd_agent.test_source_workspace import (
 @dataclass(frozen=True)
 class TestSourceCommandRun:
     """Result of generating and writing one active planned test source."""
+
+    __test__: ClassVar[bool] = False
 
     session_id: str
     cycle_number: int
@@ -79,6 +82,7 @@ def generate_active_test_source(
     generated = _generate_source(config, runner, request, command_resolver)
     target_writer = writer or AtomicTestSourceWriter()
     target_writer.write(root, request, generated)
+    record_test_source_artifact(root, status.current_session, generated)
     return TestSourceCommandRun(
         session_id=status.current_session,
         cycle_number=prepared.cycle_number,

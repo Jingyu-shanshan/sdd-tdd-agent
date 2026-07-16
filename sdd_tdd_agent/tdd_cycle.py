@@ -238,6 +238,8 @@ def _start_cycle(context: _CycleContext) -> TddCycleStart:
         "phase": "WRITE_TEST",
         "completed_tests": list(context.completed_tests),
     }
+    context.state.pop("test_source", None)
+    context.state.pop("red_evidence", None)
     serialized = f"{json.dumps(context.state, indent=2)}\n"
     state_path = context.session_path / "state.json"
     temporary = context.session_path / ".state.json.tdd-cycle.tmp"

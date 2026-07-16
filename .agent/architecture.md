@@ -102,6 +102,13 @@ only when a failing acceptance test requires it.
   require explicit package-manager/framework evidence, use tokenized Maven/
   Gradle/Jest/Vitest/Angular filters, and escape/anchor regex-based Node test
   names so one cycle cannot accidentally run additional tests.
+- Bind an atomically written current test to its ID, planned relative path, and
+  SHA-256 digest before execution. On the next `agent continue`, revalidate the
+  digest before and after a shell-free injected one-test runner, and enter RED
+  only for a positive non-zero failure attributable to that test. Keep pass,
+  signal, timeout, command/configuration, no-test, unrelated-output, and
+  concurrent-change outcomes recoverable in WRITE_TEST. Persist only sanitized,
+  bounded stdout/stderr and the exact tokenized command in Session state.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

@@ -14,6 +14,7 @@ from sdd_tdd_agent.design_review import (
     reject_active_design,
 )
 from sdd_tdd_agent.feature_session import create_feature_session
+from sdd_tdd_agent.implementation_command import continue_active_implementation
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
@@ -41,7 +42,12 @@ from sdd_tdd_agent.task_review import (
     reject_active_tasks,
 )
 from sdd_tdd_agent.test_command import generate_active_test_plan
-from sdd_tdd_agent.test_source_command import generate_active_test_source
+from sdd_tdd_agent.red_execution import (
+    RedExecutionError,
+    RedExecutionRun,
+    SystemTestCommandRunner,
+    TestCommandRunner,
+)
 from sdd_tdd_agent.test_source_workspace import TestSourceWorkspaceError
 from sdd_tdd_agent.provider_registry import (
     list_providers,
@@ -70,6 +76,7 @@ def main(
     runner: Optional[ProcessRunner] = None,
     err: Optional[TextIO] = None,
     provider_dependencies: Optional[ProviderCommandDependencies] = None,
+    test_runner: Optional[TestCommandRunner] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -194,15 +201,27 @@ def main(
 
     if arguments == ["continue"]:
         process_runner = runner if runner is not None else SubprocessRunner()
+        command_runner = test_runner or SystemTestCommandRunner()
         try:
-            run = generate_active_test_source(project_root, process_runner)
+            run = continue_active_implementation(
+                project_root,
+                process_runner,
+                command_runner,
+            )
         except (
             ValueError,
             RequirementAnalyzerError,
+            RedExecutionError,
             TestSourceWorkspaceError,
         ) as error:
             error_output.write(f"Error: {error}\n")
             return 2
+        if isinstance(run, RedExecutionRun):
+            output.write(
+                f"RED confirmed: {run.session_id} "
+                f"({run.test_id}, exit {run.returncode})\n"
+            )
+            return 0
         output.write(
             "Test source ready for RED: "
             f"{run.session_id} ({run.test_id} -> {run.file_path})\n"

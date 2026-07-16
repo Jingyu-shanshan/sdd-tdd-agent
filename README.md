@@ -65,6 +65,7 @@ requirement_analyzer_protocol: codex-exec
 requirement_analyzer_command:
   - "codex"
 requirement_analyzer_timeout_seconds: 300
+test_command_timeout_seconds: 300
 ```
 
 The Codex executable must already be authenticated. The bridge resolves `codex`
@@ -195,23 +196,36 @@ relative path. Continue the active IMPLEMENTATION Session with:
 uv run agent continue
 ```
 
-The command resumes or starts exactly one `WRITE_TEST` cycle, collects bounded
-current source/config snapshots, invokes the selected Provider, and atomically
-writes only the planned test file. Existing targets use optimistic concurrency
-checks; unsafe paths, symbolic links, stale snapshots, and temporary collisions
-fail before replacement. Codex runs from a project-external temporary directory
-so read-only tool access cannot inspect `.agent` or future tests. Success remains
-in `WRITE_TEST`; the next stage must still execute the test and prove RED.
+On the first invocation for a cycle, the command resumes or starts exactly one
+`WRITE_TEST` cycle, collects bounded current source/config snapshots, invokes
+the selected Provider, and atomically writes only the planned test file.
+Existing targets use optimistic concurrency checks; unsafe paths, symbolic
+links, stale snapshots, and temporary collisions fail before replacement.
+Codex runs from a project-external temporary directory so read-only tool access
+cannot inspect `.agent` or future tests. The resulting file ID, relative path,
+and SHA-256 digest are recorded while the cycle remains in `WRITE_TEST`.
 
-The read-only execution planner already supports the next stage across the
-planned ecosystems. It builds tokenized one-test commands for Maven or Gradle
-with JUnit 5, and for npm, pnpm, or yarn projects using Jest, Vitest, or Angular
-CLI. Java uses fully qualified class/method selectors. Node runners use one
-exact file plus an escaped and anchored test-name expression; Vitest and Angular
-watch behavior is disabled. Ambiguous lockfiles, conflicting `packageManager`
-metadata, unverified frameworks, unsafe paths, and unsupported layouts fail
-explicitly. Command execution and RED evidence are implemented in the next
-increment.
+On the second invocation, `agent continue` verifies the recorded digest and
+executes exactly that current test from the project root. The shell-free runner
+uses the separately configured positive finite `test_command_timeout_seconds`.
+It records RED only for a positive non-zero exit whose output identifies the
+current test. Unexpected passes, signals, timeouts, startup failures, no-test or
+bad-option diagnostics, unrelated output, and files changed before or during
+execution preserve `WRITE_TEST` and return a safe error. Stored stdout/stderr
+have ANSI/control data, project-root paths, and common credentials removed and
+are length-bounded. A successful RED transition reports, for example:
+
+```text
+RED confirmed: feature-1 (TC1, exit 1)
+```
+
+The cross-ecosystem execution planner builds tokenized one-test commands for
+Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects using Jest,
+Vitest, or Angular CLI. Java uses fully qualified class/method selectors. Node
+runners use one exact file plus an escaped and anchored test-name expression;
+Vitest and Angular watch behavior is disabled. Ambiguous lockfiles, conflicting
+`packageManager` metadata, unverified frameworks, unsafe paths, and unsupported
+layouts fail explicitly.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
