@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Optional, Tuple
 from xml.etree import ElementTree
 
+from sdd_tdd_agent.node_project import load_node_project
+
 
 GRADLE_BUILD_FILES = ("build.gradle", "build.gradle.kts")
 
@@ -46,6 +48,16 @@ def _detect_maven_test_frameworks(pom_path: Path) -> Tuple[str, ...]:
     return ()
 
 
+def _detect_gradle_test_frameworks(root: Path) -> Tuple[str, ...]:
+    for marker in GRADLE_BUILD_FILES:
+        path = root / marker
+        if not path.is_file():
+            continue
+        if "org.junit.jupiter" in path.read_text(encoding="utf-8"):
+            return ("junit5",)
+    return ()
+
+
 def detect_project(root: Path) -> Optional[ProjectProfile]:
     """Detect a supported project from root-level marker files."""
     pom_path = root / "pom.xml"
@@ -56,5 +68,16 @@ def detect_project(root: Path) -> Optional[ProjectProfile]:
             test_frameworks=_detect_maven_test_frameworks(pom_path),
         )
     if any((root / marker).is_file() for marker in GRADLE_BUILD_FILES):
-        return ProjectProfile(target_language="java", build_tool="gradle")
+        return ProjectProfile(
+            target_language="java",
+            build_tool="gradle",
+            test_frameworks=_detect_gradle_test_frameworks(root),
+        )
+    if (root / "package.json").is_file():
+        node = load_node_project(root)
+        return ProjectProfile(
+            target_language="typescript",
+            build_tool=node.package_manager,
+            test_frameworks=(node.test_framework,),
+        )
     return None

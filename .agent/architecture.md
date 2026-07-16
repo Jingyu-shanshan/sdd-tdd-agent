@@ -75,6 +75,77 @@ only when a failing acceptance test requires it.
   happy/boundary/exception/integration/regression order and only preceding-test
   dependencies, validate relative target paths before mutation, and enter
   IMPLEMENTATION without writing or running test code.
+- Implement test-plan model integration in a separate adapter module. Decode
+  exact nested case objects through provider-neutral JSON or the existing
+  ephemeral read-only Codex exchange, reuse injected process/resolver contracts,
+  and leave semantic ordering and Session mutation in the workflow.
+- Compose `agent tests` through a dedicated active-Session service that selects
+  the configured test-plan adapter and delegates approvals, semantics, and
+  artifact/state mutation to the core workflow.
+- Parse only deterministic generated test plans when entering implementation.
+  Track an ordered completed-test prefix and one current cycle in Session state;
+  keep the developer context restricted to the current test, production source,
+  and compiler/test output.
+- Generate one test source behind a separate typed Test Context. Supply only the
+  approved requirement/design, current test case, and explicit safe source
+  snapshots; exclude tasks, the complete plan, future tests, and execution
+  output. Bind strict JSON/Codex results to the current test ID and planned file
+  without letting the read-only model exchange mutate the project.
+- Compose the IMPLEMENTATION slice of `agent continue` from recoverable cycle
+  preparation, bounded workspace source collection, the selected test-source
+  adapter, and an optimistic-concurrency atomic writer. Run Codex from a
+  project-external temporary directory so its read-only tools cannot bypass the
+  typed Test Context. Leave the cycle in WRITE_TEST until RED is independently
+  observed.
+- Plan one-test execution through a read-only cross-ecosystem detector. Share
+  strict Node metadata between project classification and command construction;
+  require explicit package-manager/framework evidence, use tokenized Maven/
+  Gradle/Jest/Vitest/Angular filters, and escape/anchor regex-based Node test
+  names so one cycle cannot accidentally run additional tests.
+- Bind an atomically written current test to its ID, planned relative path, and
+  SHA-256 digest before execution. On the next `agent continue`, revalidate the
+  digest before and after a shell-free injected one-test runner, and enter RED
+  only for a positive non-zero failure attributable to that test. Keep pass,
+  signal, timeout, command/configuration, no-test, unrelated-output, and
+  concurrent-change outcomes recoverable in WRITE_TEST. Persist only sanitized,
+  bounded stdout/stderr and the exact tokenized command in Session state.
+- Generate minimal production code behind a separate Blind typed boundary that
+  receives only the digest-bound current test plan/source, visible production
+  snapshots, sanitized stderr as compile output, and sanitized stdout as test
+  output. Run Codex from an ephemeral project-external directory and require an
+  exact one-file result. Restrict writes to normalized non-test `src/**` source,
+  use optimistic-concurrency atomic replacement, and record only ID/path/digest
+  while transitioning RED to IMPLEMENT. Never expose SDD documents, the full
+  plan, future tests, configuration, raw Session state, or direct project tool
+  access to the Blind model.
+- Verify IMPLEMENT through two deterministic shell-free gates: the exact
+  digest-bound current test and then an unfiltered full suite with a separate
+  required timeout. Revalidate test, production, and Session state around both
+  processes. Only two zero exits append the current test and enter GREEN;
+  attributable current or regression failures return to RED with sanitized
+  retry evidence, while infrastructure and concurrency failures preserve
+  IMPLEMENT. This stage never invokes a model.
+- Advance GREEN deterministically from the ordered completed prefix. If a test
+  remains, clear every prior-cycle artifact and reuse isolated test-source
+  generation for exactly that next case. If the plan is exhausted, revalidate
+  final test/production digests and exact sanitized GREEN process evidence,
+  then atomically enter REVIEW with no model or process execution.
+- Bind REVIEW to a canonical implementation-completion snapshot. `agent review`
+  validates that snapshot against retained TDD evidence and artifact records,
+  writes a deterministic source/output-free audit report, records its digest,
+  and enters REFACTOR without external execution. State clearly that semantic
+  automated code review remains a later milestone.
+- Complete v0.1 REFACTOR without claiming automated source improvement.
+  `agent refactor` validates the complete report/completion/GREEN/source digest
+  chain around each process, reruns the exact current test followed by the
+  unfiltered suite under separate timeouts, stores only sanitized bounded
+  evidence, and atomically enters DONE after two zero exits. It invokes no model
+  and writes no source; behavior-preserving automated refactoring remains v0.3.
+- Prove the integrated core with a public-CLI acceptance test in a fresh
+  detected project. All model and target-process effects stay behind injected
+  typed runners, so the test exercises every human gate and state transition
+  from initialization through DONE without network, package-manager, or host
+  execution. Keep ecosystem-specific failure depth in focused contract tests.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

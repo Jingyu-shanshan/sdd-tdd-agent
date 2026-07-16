@@ -25,7 +25,31 @@ and validate the core workflow; it is not the only planned ecosystem.
   generation.
 - Typed incremental test-plan generation with ordered phases, task coverage,
   preceding-test dependencies, and safe target-path validation.
-- One-failing-test-at-a-time orchestration.
+- Strict JSON command and ephemeral read-only Codex test-plan adapters with
+  nested case Schema validation.
+- Active-Session `agent tests` orchestration through the selected Provider.
+- One-test-at-a-time cycle selection and a typed Blind development context.
+- Isolated one-test source generation with strict JSON and Codex adapters.
+- Safe active-Session test-source writing through the first `agent continue`
+  IMPLEMENTATION slice.
+- Shell-free one-test command planning for Maven/Gradle/JUnit 5 and
+  npm/pnpm/yarn with Jest, Vitest, or Angular CLI.
+- Digest-bound, shell-free one-failing-test-at-a-time RED execution with
+  attributable failure checks, sanitized bounded evidence, and recoverable
+  state transitions.
+- Minimal one-file production-code generation through isolated Blind JSON/Codex
+  adapters, strict `src/**` policy, optimistic atomic writing, and RED to
+  IMPLEMENT state evidence.
+- Digest-bound GREEN verification and shell-free full-suite regression checks
+  with separate timeouts, sanitized evidence, and safe RED recovery.
+- Ordered GREEN cycle advancement and trustworthy exhausted-plan transition to
+  REVIEW.
+- Deterministic digest-bound implementation audit report and REVIEW to REFACTOR
+  transition.
+- Deterministic no-source-change refactor verification with current-test and
+  full-suite gates, immutable audit-chain checks, and atomic REFACTOR to DONE.
+- Full public-CLI acceptance coverage from initialization through DONE with
+  injected model/test runners and explicit human approval gates.
 - Context isolation and state-machine recovery.
 
 ## v0.1.1: Agent provider and platform foundation
@@ -66,6 +90,9 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 ### TypeScript foundation
 
+- Root package-manager and Jest/Vitest test-command detection plus generic
+  digest-bound RED execution and Blind minimal production-source orchestration
+  are implemented.
 - Detect TypeScript projects from project metadata and configuration files.
 - Detect npm, pnpm, and yarn without assuming a package manager.
 - Detect and invoke the project's configured Jest or Vitest commands.
@@ -75,6 +102,10 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 ### Angular adapter
 
+- Root Angular workspace detection, exact non-watch file/name command planning,
+  generic RED execution, and Blind `src/**` production generation are
+  implemented; Angular-specific context conventions and broader testing
+  coverage continue in this milestone.
 - Detect Angular workspaces and applications from their project metadata.
 - Capture Angular architecture constraints in SDD design documents.
 - Support incremental tests for components, services, directives, pipes,

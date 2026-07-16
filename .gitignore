@@ -13,3 +13,4 @@ build/
 .agent/logs/
 .agent/metrics/
 .agent/**/*.tmp
+*.agent.tmp

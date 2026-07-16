@@ -6,9 +6,10 @@ contexts.
 
 ## Current capabilities
 
-The current slices provide a working CLI, project/session workspace,
-requirement-analysis workflow, typed model adapters, and provider selection
-while preserving the specification and incremental TDD record structure.
+The current v0.1 core provides a working public CLI from project/session setup
+through requirement, design, task, and test-plan approval gates; isolated
+incremental TDD implementation; deterministic review; final verification; and
+DONE. Model and target-process boundaries remain typed, injected, and testable.
 
 ```bash
 uv run agent hello
@@ -31,7 +32,10 @@ The command creates `.agent/` metadata plus the `memories`, `sessions`,
 metadata. Fresh workspaces also record Java/Maven projects detected by
 `pom.xml` and Java/Gradle projects detected by `build.gradle` or
 `build.gradle.kts`. Maven projects declaring an `org.junit.jupiter` dependency
-also record JUnit 5 as their test framework.
+also record JUnit 5 as their test framework. Root TypeScript projects are
+detected from strict `package.json` metadata plus an explicit `packageManager`
+or one consistent lockfile; configured Jest, Vitest, and Angular test scripts
+are reported without guessing a package manager or framework.
 
 Inspect project classification and the active development session with:
 
@@ -62,6 +66,7 @@ requirement_analyzer_protocol: codex-exec
 requirement_analyzer_command:
   - "codex"
 requirement_analyzer_timeout_seconds: 300
+test_command_timeout_seconds: 300
 ```
 
 The Codex executable must already be authenticated. The bridge resolves `codex`
@@ -158,8 +163,161 @@ independently executable tests across happy-path, boundary, exception,
 integration, and regression phases. It enforces stable test/task IDs,
 preceding-test dependencies, complete task coverage, and safe relative target
 paths. Valid output writes deterministic `test-plan.md` and enters
-`IMPLEMENTATION`; it does not write or run test code. Production adapters and CLI
-orchestration for test-plan generation are deferred to subsequent increments.
+`IMPLEMENTATION`; it does not write or run test code. Strict provider-neutral
+JSON command and Codex exec adapters implement this generator boundary with an
+exact nested case Schema, ephemeral read-only execution, private temporary
+exchange cleanup, and safe errors. CLI orchestration remains deferred to the
+next increment. Generate the active Session plan through the currently selected
+Provider with:
+
+```bash
+uv run agent tests
+```
+
+The command requires `TEST_GENERATION` plus all three approvals. Valid output
+writes `test-plan.md` and enters `IMPLEMENTATION`; configuration, state, or model
+failure does not advance the Session.
+
+The implementation-cycle core then selects exactly one incomplete test in plan
+order and atomically records `WRITE_TEST` progress. Completed tests must form a
+plan prefix and all dependencies must already be GREEN. Its typed Blind
+development context exposes only the current test, explicitly supplied
+test source, production snapshots, and compile/test output—never requirements,
+design, tasks, the complete plan, or future tests.
+
+The single-test generation core uses a separate Test Context: it may see the
+approved requirement/design, exactly one current test case, and explicitly
+supplied safe source snapshots. It cannot see tasks, the complete test plan,
+future tests, or compiler/test output. A versioned Prompt and typed generator
+produce one complete test file; strict JSON command and ephemeral read-only
+Codex adapters require the result to match the current test ID and its planned
+relative path. Continue the active IMPLEMENTATION Session with:
+
+```bash
+uv run agent continue
+```
+
+On the first invocation for a cycle, the command resumes or starts exactly one
+`WRITE_TEST` cycle, collects bounded current source/config snapshots, invokes
+the selected Provider, and atomically writes only the planned test file.
+Existing targets use optimistic concurrency checks; unsafe paths, symbolic
+links, stale snapshots, and temporary collisions fail before replacement.
+Codex runs from a project-external temporary directory so read-only tool access
+cannot inspect `.agent` or future tests. The resulting file ID, relative path,
+and SHA-256 digest are recorded while the cycle remains in `WRITE_TEST`.
+
+On the second invocation, `agent continue` verifies the recorded digest and
+executes exactly that current test from the project root. The shell-free runner
+uses the separately configured positive finite `test_command_timeout_seconds`.
+It records RED only for a positive non-zero exit whose output identifies the
+current test. Unexpected passes, signals, timeouts, startup failures, no-test or
+bad-option diagnostics, unrelated output, and files changed before or during
+execution preserve `WRITE_TEST` and return a safe error. Stored stdout/stderr
+have ANSI/control data, project-root paths, and common credentials removed and
+are length-bounded. A successful RED transition reports, for example:
+
+```text
+RED confirmed: feature-1 (TC1, exit 1)
+```
+
+On the third invocation, `agent continue` builds the Blind development context
+from that digest-bound current test, visible production source, and sanitized
+RED stderr/stdout (mapped to compile/test output). The selected Provider must
+return the complete content of exactly one minimal production file. Strict JSON
+and isolated ephemeral read-only Codex adapters never receive requirement,
+design, task, complete-plan, future-test, or raw Session content.
+
+The writer permits only normalized supported source files below `src/` and
+rejects test-like paths, configuration/build files, hidden paths, traversal,
+symbolic links, stale targets, invalid UTF-8, and temporary collisions. Existing
+source is replaced only if its captured content is unchanged; one safe new
+source may be created. Success atomically records the production file ID, path,
+and SHA-256 and advances only RED to IMPLEMENT:
+
+```text
+Production source ready for GREEN: feature-1 (TC1 -> src/export.ts)
+```
+
+On the fourth invocation, `agent continue` revalidates both recorded source
+digests, runs the exact current test first, and runs the complete suite only
+after that test passes. The suite uses its own required positive finite
+`full_test_suite_timeout_seconds`. Maven and Gradle run their unfiltered test
+tasks; Jest, Vitest, and Angular use non-watch full-suite arguments through the
+verified package-manager prefix.
+
+Only two zero exits atomically append the current test to the completed plan
+prefix and advance IMPLEMENT to GREEN:
+
+```text
+GREEN confirmed: feature-1 (TC1; current test and full suite passed)
+```
+
+A trustworthy current-test failure or full-suite regression returns the cycle
+to RED with sanitized bounded retry evidence. Signals, timeouts, startup
+failures, no-test or invalid-option diagnostics, empty failures, changed
+sources, and concurrent state updates preserve IMPLEMENT. GREEN verification
+is deterministic, invokes no model, and never treats production-source writing
+alone as proof that tests pass.
+
+On the next invocation after GREEN, `agent continue` checks the ordered plan.
+If another dependency-ready test remains, it clears all prior-cycle evidence
+and starts exactly that test through the same isolated WRITE_TEST generation
+path. If the completed prefix exhausts the plan, it revalidates both final
+source digests and the exact sanitized current/full-suite GREEN evidence, then
+atomically enters REVIEW without invoking a model or process runner:
+
+```text
+Implementation ready for review: feature-1 (1 tests GREEN)
+```
+
+Stale artifacts, incomplete plans, malformed evidence, concurrent state
+changes, or atomic collisions preserve GREEN for safe recovery.
+
+Run the deterministic implementation audit after the exhausted plan enters
+REVIEW:
+
+```bash
+uv run agent review
+```
+
+The command verifies the digest-bound completion snapshot against the retained
+completed-test prefix, final test, GREEN evidence, and test/production artifact
+records. It writes a bounded `review.md` containing IDs, counts, and digests—no
+source or process output—then atomically enters REFACTOR. It invokes no model,
+test runner, or shell command. The report explicitly marks semantic automated
+code review as deferred to v0.3 instead of claiming uncomputed findings.
+
+Finish the v0.1 workflow with deterministic refactor verification:
+
+```bash
+uv run agent refactor
+```
+
+This command implements the honest v0.1 refactor contract: it makes no source
+change and invokes no model. It revalidates the complete review, completion,
+GREEN-evidence, and final-source digest chain, reruns the recorded current test
+and then the recorded unfiltered suite with separate timeouts, and requires two
+zero exits. It stores only sanitized bounded final evidence and atomically
+enters DONE. Any failed process, changed source or state, stale record, unsafe
+path, or concurrent update preserves REFACTOR. Automated behavior-preserving
+source refactoring remains planned for v0.3.
+
+The complete public-CLI sequence is covered by an isolated end-to-end
+acceptance test using a fresh detected TypeScript/Vitest project. It verifies
+every state transition, explicit human gate, Blind production context, exact
+RED/current/full-suite command ordering, separate timeouts, audit records, and
+the final DONE transition without invoking a real model, package manager, or
+network service. Focused tests independently cover Java/JUnit, Angular CLI,
+Jest, Vitest, Maven, Gradle, npm, pnpm, and yarn planning and recovery behavior.
+
+The cross-ecosystem execution planner builds tokenized one-test and full-suite
+commands for Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects
+using Jest, Vitest, or Angular CLI. Java uses fully qualified class/method
+selectors. Node runners use one exact file plus an escaped and anchored
+test-name expression; the suite plans contain no current-test filter. Vitest
+and Angular watch behavior is disabled. Ambiguous lockfiles, conflicting
+`packageManager` metadata, unverified frameworks, unsafe paths, and unsupported
+layouts fail explicitly.
 
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.

@@ -14,6 +14,19 @@ from sdd_tdd_agent.design_review import (
     reject_active_design,
 )
 from sdd_tdd_agent.feature_session import create_feature_session
+from sdd_tdd_agent.cycle_completion import (
+    CycleCompletionError,
+    ImplementationCompletionRun,
+)
+from sdd_tdd_agent.green_verification import (
+    GreenVerificationError,
+    GreenVerificationRun,
+)
+from sdd_tdd_agent.implementation_command import continue_active_implementation
+from sdd_tdd_agent.implementation_review import (
+    ImplementationReviewError,
+    run_active_implementation_review,
+)
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
@@ -25,6 +38,8 @@ from sdd_tdd_agent.platform_contract import (
     SystemPlatformEnvironment,
     render_platform_diagnostic,
 )
+from sdd_tdd_agent.production_source_command import ProductionSourceCommandRun
+from sdd_tdd_agent.production_source_workspace import ProductionSourceWorkspaceError
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
 from sdd_tdd_agent.requirement_review import (
@@ -40,6 +55,18 @@ from sdd_tdd_agent.task_review import (
     load_active_task_review,
     reject_active_tasks,
 )
+from sdd_tdd_agent.test_command import generate_active_test_plan
+from sdd_tdd_agent.red_execution import (
+    RedExecutionError,
+    RedExecutionRun,
+    SystemTestCommandRunner,
+    TestCommandRunner,
+)
+from sdd_tdd_agent.refactor_completion import (
+    RefactorVerificationError,
+    complete_active_refactor,
+)
+from sdd_tdd_agent.test_source_workspace import TestSourceWorkspaceError
 from sdd_tdd_agent.provider_registry import (
     list_providers,
     load_provider_selection,
@@ -67,6 +94,7 @@ def main(
     runner: Optional[ProcessRunner] = None,
     err: Optional[TextIO] = None,
     provider_dependencies: Optional[ProviderCommandDependencies] = None,
+    test_runner: Optional[TestCommandRunner] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -92,6 +120,32 @@ def main(
         description = " ".join(arguments[1:])
         session = create_feature_session(project_root, description)
         output.write(f"Created feature session: {session.session_id}\n")
+        return 0
+
+    if arguments == ["review"]:
+        try:
+            run = run_active_implementation_review(project_root)
+        except ImplementationReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Implementation review passed: {run.session_id} "
+            f"({run.completed_test_count} tests; final {run.final_test_id}; "
+            "ready for REFACTOR)\n"
+        )
+        return 0
+
+    if arguments == ["refactor"]:
+        command_runner = test_runner or SystemTestCommandRunner()
+        try:
+            run = complete_active_refactor(project_root, command_runner)
+        except (RefactorVerificationError, RedExecutionError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Refactor verification complete: {run.session_id} "
+            f"({run.completed_test_count} tests; DONE)\n"
+        )
         return 0
 
     if arguments and arguments[0] == "analyze":
@@ -174,6 +228,68 @@ def main(
             return 2
         output.write(
             f"Design approved: {decision.session_id} ({decision.next_state})\n"
+        )
+        return 0
+
+    if arguments == ["tests"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        try:
+            run = generate_active_test_plan(project_root, process_runner)
+        except (ValueError, RequirementAnalyzerError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Test plan ready for implementation: {run.session_id} ({run.next_state})\n"
+        )
+        return 0
+
+    if arguments == ["continue"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        command_runner = test_runner or SystemTestCommandRunner()
+        try:
+            run = continue_active_implementation(
+                project_root,
+                process_runner,
+                command_runner,
+            )
+        except (
+            ValueError,
+            RequirementAnalyzerError,
+            RedExecutionError,
+            GreenVerificationError,
+            CycleCompletionError,
+            ProductionSourceWorkspaceError,
+            TestSourceWorkspaceError,
+        ) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        if isinstance(run, RedExecutionRun):
+            output.write(
+                f"RED confirmed: {run.session_id} "
+                f"({run.test_id}, exit {run.returncode})\n"
+            )
+            return 0
+        if isinstance(run, ProductionSourceCommandRun):
+            output.write(
+                "Production source ready for GREEN: "
+                f"{run.session_id} ({run.test_id} -> {run.file_path})\n"
+            )
+            return 0
+        if isinstance(run, GreenVerificationRun):
+            output.write(
+                f"GREEN confirmed: {run.session_id} "
+                f"({run.test_id}; current test and full suite passed)\n"
+            )
+            return 0
+        if isinstance(run, ImplementationCompletionRun):
+            output.write(
+                f"Implementation ready for review: {run.session_id} "
+                f"({len(run.completed_tests)} tests GREEN)\n"
+            )
+            return 0
+        output.write(
+            "Test source ready for RED: "
+            f"{run.session_id} ({run.test_id} -> {run.file_path})\n"
         )
         return 0
 
