@@ -6,6 +6,8 @@ from typing import Dict, Optional, Tuple
 from sdd_tdd_agent.design_generation import (
     DesignGenerationRequest,
     DesignProposal,
+    TypeScriptModuleDesign,
+    TypeScriptPublicApiDesign,
 )
 from sdd_tdd_agent.model_adapter import (
     CodexCommandResolver,
@@ -28,6 +30,7 @@ DESIGN_FIELDS = (
     "risks_and_tradeoffs",
     "open_questions",
 )
+OPTIONAL_DESIGN_FIELDS = ("typescript_modules", "public_apis")
 
 DESIGN_SCHEMA: Dict[str, object] = {
     "type": "object",
@@ -51,6 +54,33 @@ DESIGN_SCHEMA: Dict[str, object] = {
             "items": {"type": "string"},
         },
         "open_questions": {"type": "array", "items": {"type": "string"}},
+        "typescript_modules": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "responsibility": {"type": "string"},
+                    "exports": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["path", "responsibility", "exports"],
+                "additionalProperties": False,
+            },
+        },
+        "public_apis": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "kind": {"type": "string"},
+                    "signature": {"type": "string"},
+                    "module": {"type": "string"},
+                },
+                "required": ["name", "kind", "signature", "module"],
+                "additionalProperties": False,
+            },
+        },
     },
     "required": list(DESIGN_FIELDS),
     "additionalProperties": False,
@@ -61,8 +91,8 @@ class DesignGeneratorError(RequirementAnalyzerError):
     """Safe public error raised by a design generator adapter."""
 
 
-def _request_payload(request: DesignGenerationRequest) -> Dict[str, str]:
-    return {
+def _request_payload(request: DesignGenerationRequest) -> Dict[str, object]:
+    payload: Dict[str, object] = {
         "prompt_version": request.prompt_version,
         "prompt": request.prompt,
         "requirement": request.requirement,
@@ -70,6 +100,15 @@ def _request_payload(request: DesignGenerationRequest) -> Dict[str, str]:
         "architecture": request.architecture,
         "conventions": request.conventions,
     }
+    context = request.typescript_context
+    if context is not None:
+        payload["typescript_context"] = {
+            "package_manager": context.package_manager,
+            "test_framework": context.test_framework,
+            "is_angular": context.is_angular,
+            "config_files": list(context.config_files),
+        }
+    return payload
 
 
 def _string_tuple(payload: Dict[str, object], key: str) -> Tuple[str, ...]:
@@ -77,6 +116,75 @@ def _string_tuple(payload: Dict[str, object], key: str) -> Tuple[str, ...]:
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise DesignGeneratorError(f"Design generator field has invalid type: {key}")
     return tuple(value)
+
+
+def _strict_record(
+    value: object,
+    fields: Tuple[str, ...],
+    label: str,
+) -> Dict[str, object]:
+    if not isinstance(value, dict) or set(value) != set(fields):
+        raise DesignGeneratorError(f"Design generator {label} has invalid fields")
+    return value
+
+
+def _record_string(record: Dict[str, object], key: str, label: str) -> str:
+    value = record[key]
+    if not isinstance(value, str):
+        raise DesignGeneratorError(f"Design generator {label} has invalid type")
+    return value
+
+
+def _decode_typescript_modules(value: object) -> Tuple[TypeScriptModuleDesign, ...]:
+    if not isinstance(value, list):
+        raise DesignGeneratorError("Design generator TypeScript modules are invalid")
+    modules: list[TypeScriptModuleDesign] = []
+    for item in value:
+        record = _strict_record(
+            item,
+            ("path", "responsibility", "exports"),
+            "TypeScript module",
+        )
+        exports = record["exports"]
+        if not isinstance(exports, list) or any(
+            not isinstance(name, str) for name in exports
+        ):
+            raise DesignGeneratorError(
+                "Design generator TypeScript module exports are invalid"
+            )
+        modules.append(
+            TypeScriptModuleDesign(
+                path=_record_string(record, "path", "TypeScript module"),
+                responsibility=_record_string(
+                    record,
+                    "responsibility",
+                    "TypeScript module",
+                ),
+                exports=tuple(exports),
+            )
+        )
+    return tuple(modules)
+
+
+def _decode_public_apis(value: object) -> Tuple[TypeScriptPublicApiDesign, ...]:
+    if not isinstance(value, list):
+        raise DesignGeneratorError("Design generator public APIs are invalid")
+    apis: list[TypeScriptPublicApiDesign] = []
+    for item in value:
+        record = _strict_record(
+            item,
+            ("name", "kind", "signature", "module"),
+            "public API",
+        )
+        apis.append(
+            TypeScriptPublicApiDesign(
+                name=_record_string(record, "name", "public API"),
+                kind=_record_string(record, "kind", "public API"),
+                signature=_record_string(record, "signature", "public API"),
+                module=_record_string(record, "module", "public API"),
+            )
+        )
+    return tuple(apis)
 
 
 def _decode_proposal(content: str) -> DesignProposal:
@@ -87,7 +195,9 @@ def _decode_proposal(content: str) -> DesignProposal:
     if not isinstance(payload_value, dict):
         raise DesignGeneratorError("Design generator response must be a JSON object")
     payload: Dict[str, object] = payload_value
-    if set(payload) != set(DESIGN_FIELDS):
+    fields = set(payload)
+    allowed = set(DESIGN_FIELDS) | set(OPTIONAL_DESIGN_FIELDS)
+    if not set(DESIGN_FIELDS).issubset(fields) or not fields.issubset(allowed):
         raise DesignGeneratorError("Design generator response keys do not match schema")
     overview = payload["overview"]
     if not isinstance(overview, str):
@@ -106,6 +216,10 @@ def _decode_proposal(content: str) -> DesignProposal:
         testing_strategy=_string_tuple(payload, "testing_strategy"),
         risks_and_tradeoffs=_string_tuple(payload, "risks_and_tradeoffs"),
         open_questions=_string_tuple(payload, "open_questions"),
+        typescript_modules=_decode_typescript_modules(
+            payload.get("typescript_modules", [])
+        ),
+        public_apis=_decode_public_apis(payload.get("public_apis", [])),
     )
 
 

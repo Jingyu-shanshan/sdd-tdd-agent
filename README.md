@@ -122,6 +122,15 @@ explicitly approving a requirement, generate the active Session design with:
 uv run agent design
 ```
 
+Detected TypeScript projects with a supported root `tsconfig` marker use the
+dedicated versioned `v2-typescript` Prompt. Their typed request context records
+the verified package manager, test framework, Angular classification, and root
+TypeScript configuration markers. The proposal adds strictly validated
+`src/**/*.ts` or `src/**/*.tsx` module records and their public APIs, and
+renders them as deterministic SDD sections. Projects without that explicit
+configuration evidence, plus generic and Java projects, retain the original v1
+request and output contract.
+
 The command requires `DESIGN` state and the stored human approval record. A
 valid structured result writes `design.md` and stops at `DESIGN_REVIEW`; invalid
 configuration, state, or model output fails without advancing the Session.

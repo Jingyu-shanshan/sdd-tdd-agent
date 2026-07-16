@@ -101,11 +101,13 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 - Root package-manager and Jest/Vitest test-command detection plus generic
   digest-bound RED execution and Blind minimal production-source orchestration
-  are implemented.
-- Detect TypeScript projects from project metadata and configuration files.
-- Detect npm, pnpm, and yarn without assuming a package manager.
-- Detect and invoke the project's configured Jest or Vitest commands.
-- Generate typed SDD artifacts for TypeScript modules and public APIs.
+  are implemented. Design generation now carries verified TypeScript project
+  context with a supported root `tsconfig` marker into a dedicated versioned
+  Prompt and produces validated module and public-API SDD sections.
+- TypeScript project, npm/pnpm/yarn, and Jest/Vitest detection are implemented
+  from explicit project metadata and configuration evidence.
+- Typed SDD artifacts for safe TypeScript modules and public APIs are
+  implemented without changing generic or Java design contracts.
 - Apply the same incremental TDD loop used by Java: one failing test, minimal
   implementation, passing suite, refactor, repeat.
 
