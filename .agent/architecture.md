@@ -130,6 +130,11 @@ only when a failing acceptance test requires it.
   generation for exactly that next case. If the plan is exhausted, revalidate
   final test/production digests and exact sanitized GREEN process evidence,
   then atomically enter REVIEW with no model or process execution.
+- Bind REVIEW to a canonical implementation-completion snapshot. `agent review`
+  validates that snapshot against retained TDD evidence and artifact records,
+  writes a deterministic source/output-free audit report, records its digest,
+  and enters REFACTOR without external execution. State clearly that semantic
+  automated code review remains a later milestone.
 - Support provider-neutral model bridges through a strict JSON stdin/stdout
   adapter and an injected process runner. Production execution must use
   tokenized arguments with `shell=False` and redact process/request content from

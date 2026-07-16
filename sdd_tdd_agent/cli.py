@@ -23,6 +23,10 @@ from sdd_tdd_agent.green_verification import (
     GreenVerificationRun,
 )
 from sdd_tdd_agent.implementation_command import continue_active_implementation
+from sdd_tdd_agent.implementation_review import (
+    ImplementationReviewError,
+    run_active_implementation_review,
+)
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
@@ -112,6 +116,19 @@ def main(
         description = " ".join(arguments[1:])
         session = create_feature_session(project_root, description)
         output.write(f"Created feature session: {session.session_id}\n")
+        return 0
+
+    if arguments == ["review"]:
+        try:
+            run = run_active_implementation_review(project_root)
+        except ImplementationReviewError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Implementation review passed: {run.session_id} "
+            f"({run.completed_test_count} tests; final {run.final_test_id}; "
+            "ready for REFACTOR)\n"
+        )
         return 0
 
     if arguments and arguments[0] == "analyze":

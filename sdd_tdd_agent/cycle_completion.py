@@ -1,4 +1,5 @@
 import json
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, Dict, Tuple
@@ -28,6 +29,7 @@ from sdd_tdd_agent.test_generation import TestCasePlan
 
 GREEN_EVIDENCE_FIELDS = {"test_id", "current_test", "full_suite"}
 PROCESS_EVIDENCE_FIELDS = {"command", "returncode", "stdout", "stderr"}
+SHA256_LENGTH = 64
 
 
 class CycleCompletionError(RuntimeError):
@@ -123,6 +125,36 @@ def _validate_green_evidence(
     _process_evidence(root, evidence["full_suite"], suite.command)
 
 
+def canonical_json_sha256(value: object) -> str:
+    """Return a deterministic SHA-256 for one JSON-compatible value."""
+    serialized = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _artifact_digest(state: Dict[str, object], key: str) -> str:
+    artifact = state.get(key)
+    if not isinstance(artifact, dict):
+        raise CycleCompletionError("Completion artifact record is invalid")
+    digest = artifact.get("sha256")
+    if not isinstance(digest, str) or len(digest) != SHA256_LENGTH:
+        raise CycleCompletionError("Completion artifact record is invalid")
+    return digest
+
+
+def _completion_record(context: _CompletionContext) -> Dict[str, object]:
+    evidence = context.state.get("green_evidence")
+    return {
+        "completed_tests": list(context.completed_tests),
+        "final_test": context.case.test_id,
+        "green_evidence_sha256": canonical_json_sha256(evidence),
+        "test_source_sha256": _artifact_digest(context.state, "test_source"),
+        "production_source_sha256": _artifact_digest(
+            context.state,
+            "production_source",
+        ),
+    }
+
+
 def _load_context(root: Path, session_id: str) -> _CompletionContext:
     state_path = root / ".agent" / "sessions" / session_id / "state.json"
     raw_state = _read_state(state_path)
@@ -181,6 +213,7 @@ def complete_active_implementation(root: Path) -> ImplementationCompletionRun:
         raise CycleCompletionError("Session state changed concurrently")
     after.state["state"] = "REVIEW"
     after.state["current_task"] = None
+    after.state["implementation_completion"] = _completion_record(after)
     _write_state(after)
     return ImplementationCompletionRun(
         status.current_session,

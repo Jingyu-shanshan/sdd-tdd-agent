@@ -272,6 +272,20 @@ Implementation ready for review: feature-1 (1 tests GREEN)
 Stale artifacts, incomplete plans, malformed evidence, concurrent state
 changes, or atomic collisions preserve GREEN for safe recovery.
 
+Run the deterministic implementation audit after the exhausted plan enters
+REVIEW:
+
+```bash
+uv run agent review
+```
+
+The command verifies the digest-bound completion snapshot against the retained
+completed-test prefix, final test, GREEN evidence, and test/production artifact
+records. It writes a bounded `review.md` containing IDs, counts, and digests—no
+source or process output—then atomically enters REFACTOR. It invokes no model,
+test runner, or shell command. The report explicitly marks semantic automated
+code review as deferred to v0.3 instead of claiming uncomputed findings.
+
 The cross-ecosystem execution planner builds tokenized one-test and full-suite
 commands for Maven or Gradle with JUnit 5, and for npm, pnpm, or yarn projects
 using Jest, Vitest, or Angular CLI. Java uses fully qualified class/method

@@ -44,7 +44,9 @@ and validate the core workflow; it is not the only planned ecosystem.
   with separate timeouts, sanitized evidence, and safe RED recovery.
 - Ordered GREEN cycle advancement and trustworthy exhausted-plan transition to
   REVIEW.
-- Review and refactor completion.
+- Deterministic digest-bound implementation audit report and REVIEW to REFACTOR
+  transition.
+- Refactor completion and final verification.
 - Context isolation and state-machine recovery.
 
 ## v0.1.1: Agent provider and platform foundation
