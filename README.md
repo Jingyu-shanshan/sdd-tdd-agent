@@ -131,6 +131,14 @@ renders them as deterministic SDD sections. Projects without that explicit
 configuration evidence, plus generic and Java projects, retain the original v1
 request and output contract.
 
+Verified Angular projects with a supported root `tsconfig` use the dedicated
+`v3-angular` Prompt. The read-only context strictly loads the workspace version
+and each configured application/library boundary from `angular.json`. Proposed
+modules must remain under one configured project `sourceRoot`, including
+monorepo library roots. Typed architecture constraints record an allowed area,
+decision, rationale, and verification method before the design can enter human
+review.
+
 The command requires `DESIGN` state and the stored human approval record. A
 valid structured result writes `design.md` and stops at `DESIGN_REVIEW`; invalid
 configuration, state, or model output fails without advancing the Session.

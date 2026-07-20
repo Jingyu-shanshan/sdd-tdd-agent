@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 from sdd_tdd_agent.design_generation import (
+    AngularArchitectureConstraint,
     DesignGenerationRequest,
     DesignProposal,
     TypeScriptModuleDesign,
@@ -30,7 +31,11 @@ DESIGN_FIELDS = (
     "risks_and_tradeoffs",
     "open_questions",
 )
-OPTIONAL_DESIGN_FIELDS = ("typescript_modules", "public_apis")
+OPTIONAL_DESIGN_FIELDS = (
+    "typescript_modules",
+    "public_apis",
+    "angular_constraints",
+)
 
 DESIGN_SCHEMA: Dict[str, object] = {
     "type": "object",
@@ -81,6 +86,20 @@ DESIGN_SCHEMA: Dict[str, object] = {
                 "additionalProperties": False,
             },
         },
+        "angular_constraints": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "area": {"type": "string"},
+                    "decision": {"type": "string"},
+                    "rationale": {"type": "string"},
+                    "verification": {"type": "string"},
+                },
+                "required": ["area", "decision", "rationale", "verification"],
+                "additionalProperties": False,
+            },
+        },
     },
     "required": list(DESIGN_FIELDS),
     "additionalProperties": False,
@@ -107,6 +126,21 @@ def _request_payload(request: DesignGenerationRequest) -> Dict[str, object]:
             "test_framework": context.test_framework,
             "is_angular": context.is_angular,
             "config_files": list(context.config_files),
+        }
+    angular = request.angular_context
+    if angular is not None:
+        payload["angular_context"] = {
+            "version": angular.version,
+            "projects": [
+                {
+                    "name": project.name,
+                    "project_type": project.project_type,
+                    "root": project.root,
+                    "source_root": project.source_root,
+                    "prefix": project.prefix,
+                }
+                for project in angular.projects
+            ],
         }
     return payload
 
@@ -187,6 +221,33 @@ def _decode_public_apis(value: object) -> Tuple[TypeScriptPublicApiDesign, ...]:
     return tuple(apis)
 
 
+def _decode_angular_constraints(
+    value: object,
+) -> Tuple[AngularArchitectureConstraint, ...]:
+    if not isinstance(value, list):
+        raise DesignGeneratorError("Design generator Angular constraints are invalid")
+    constraints: list[AngularArchitectureConstraint] = []
+    for item in value:
+        record = _strict_record(
+            item,
+            ("area", "decision", "rationale", "verification"),
+            "Angular constraint",
+        )
+        constraints.append(
+            AngularArchitectureConstraint(
+                area=_record_string(record, "area", "Angular constraint"),
+                decision=_record_string(record, "decision", "Angular constraint"),
+                rationale=_record_string(record, "rationale", "Angular constraint"),
+                verification=_record_string(
+                    record,
+                    "verification",
+                    "Angular constraint",
+                ),
+            )
+        )
+    return tuple(constraints)
+
+
 def _decode_proposal(content: str) -> DesignProposal:
     try:
         payload_value = json.loads(content)
@@ -220,6 +281,9 @@ def _decode_proposal(content: str) -> DesignProposal:
             payload.get("typescript_modules", [])
         ),
         public_apis=_decode_public_apis(payload.get("public_apis", [])),
+        angular_constraints=_decode_angular_constraints(
+            payload.get("angular_constraints", [])
+        ),
     )
 
 

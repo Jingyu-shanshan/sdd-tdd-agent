@@ -115,10 +115,13 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 - Root Angular workspace detection, exact non-watch file/name command planning,
   generic RED execution, and Blind `src/**` production generation are
-  implemented; Angular-specific context conventions and broader testing
-  coverage continue in this milestone.
-- Detect Angular workspaces and applications from their project metadata.
-- Capture Angular architecture constraints in SDD design documents.
+  implemented. Design generation now strictly carries configured application/
+  library boundaries into a dedicated Angular Prompt and requires typed,
+  verifiable architecture constraints.
+- Angular workspaces, applications, and libraries are detected from explicit
+  package and `angular.json` metadata.
+- Typed Angular architecture constraints and project-source-root boundaries are
+  captured in deterministic SDD design documents.
 - Support incremental tests for components, services, directives, pipes,
   routing, forms, and HTTP integrations.
 - Use the test runner and Angular testing facilities already configured by the

@@ -43,20 +43,27 @@ only when a failing acceptance test requires it.
   the decision in state, and atomically transition to DESIGN or back to
   ANALYSIS.
 - Isolate design generation behind its own injected typed Protocol and
-  versioned Prompt. Select a dedicated TypeScript Prompt only from verified
-  project detection with a supported root `tsconfig` marker, carry immutable
-  package-manager/framework/Angular/config evidence, and keep projects without
-  that evidence plus generic and Java requests on v1. Require both DESIGN state
-  and the stored human requirement approval, validate structured design output
-  before mutation, and stop at DESIGN_REVIEW rather than silently entering task
-  breakdown.
+  versioned Prompt. Select dedicated TypeScript or Angular Prompts only from
+  verified project detection with a supported root `tsconfig` marker, carry
+  immutable package-manager/framework/config evidence, and keep projects
+  without that evidence plus generic and Java requests on v1. For Angular,
+  strictly load `angular.json` workspace version and application/library
+  boundaries before generation. Require both DESIGN state and the stored human
+  requirement approval, validate structured design output before mutation, and
+  stop at DESIGN_REVIEW rather than silently entering task breakdown.
 - Implement design model integration in a separate adapter module. Reuse the
   existing tokenized process/configuration/resolver contracts, enforce the ten
   required generic JSON fields plus optional strict TypeScript module/public-API
-  records, and apply the same ephemeral read-only Codex exchange without mixing
-  Session mutation into provider code. TypeScript workflows require normalized
-  `src/**/*.ts` or `src/**/*.tsx` modules, non-empty exports, closed API kinds,
-  unique identities, and valid module references before artifact mutation.
+  and Angular architecture-constraint records, and apply the same ephemeral
+  read-only Codex exchange without mixing Session mutation into provider code.
+  TypeScript workflows require normalized source modules, non-empty exports,
+  closed API kinds, unique identities, and valid module references. Angular
+  modules must stay under a configured project source root, and constraint
+  areas, content, and uniqueness are validated before artifact mutation.
+- Parse Angular workspace metadata in a separate read-only module with strict
+  JSON duplicate-key handling. Accept only configured application/library
+  records with normalized project and source-root boundaries; do not resolve or
+  infer builders, configurations, or runtime conventions.
 - Compose `agent design` through a dedicated active-Session service that reuses
   the selected Provider protocol, command, and timeout, chooses the matching
   design adapter, and delegates all state/artifact validation to the design
