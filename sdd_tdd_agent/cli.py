@@ -49,6 +49,8 @@ from sdd_tdd_agent.requirement_review import (
     load_active_requirement_review,
     reject_active_requirement,
 )
+from sdd_tdd_agent.semantic_review import SemanticReviewError
+from sdd_tdd_agent.semantic_review_command import run_active_semantic_review
 from sdd_tdd_agent.task_command import generate_active_tasks
 from sdd_tdd_agent.task_review import (
     TaskReviewError,
@@ -127,6 +129,19 @@ def main(
         description = " ".join(arguments[1:])
         session = create_bug_session(project_root, description)
         output.write(f"Created bug session: {session.session_id}\n")
+        return 0
+
+    if arguments == ["review", "semantic"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        try:
+            run = run_active_semantic_review(project_root, process_runner)
+        except (ValueError, SemanticReviewError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Semantic review ready: {run.session_id} "
+            f"({run.decision}; {run.finding_count} findings; REVIEW)\n"
+        )
         return 0
 
     if arguments == ["review"]:

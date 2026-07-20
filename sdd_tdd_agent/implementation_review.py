@@ -20,6 +20,13 @@ PROGRESS_FIELDS = {"current_test", "phase", "completed_tests"}
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 PENDING_REVIEW = "# Review\n\nPending requirement analysis.\n"
 MAX_REVIEW_CHARACTERS = 20_000
+SEMANTIC_REVIEW_FIELDS = {
+    "decision",
+    "completion_sha256",
+    "report_sha256",
+    "finding_count",
+    "error_count",
+}
 
 
 class ImplementationReviewError(RuntimeError):
@@ -162,6 +169,27 @@ def _load_context(root: Path, session_id: str) -> _ReviewContext:
 
 
 def _render_report(context: _ReviewContext) -> str:
+    semantic = context.state.get("semantic_review")
+    if semantic is not None:
+        if not isinstance(semantic, dict) or set(semantic) != SEMANTIC_REVIEW_FIELDS:
+            raise ImplementationReviewError("Semantic review record is invalid")
+        if (
+            semantic["completion_sha256"] != context.completion_sha256
+            or semantic["report_sha256"]
+            != hashlib.sha256(context.raw_review.encode("utf-8")).hexdigest()
+            or not isinstance(semantic["finding_count"], int)
+            or isinstance(semantic["finding_count"], bool)
+            or semantic["finding_count"] < 0
+            or not isinstance(semantic["error_count"], int)
+            or isinstance(semantic["error_count"], bool)
+            or semantic["error_count"] < 0
+        ):
+            raise ImplementationReviewError("Semantic review record is stale")
+        if semantic["decision"] != "approved" or semantic["error_count"] != 0:
+            raise ImplementationReviewError("Semantic review requires changes")
+        if not context.raw_review.startswith("# Semantic Implementation Review\n"):
+            raise ImplementationReviewError("Semantic review report is invalid")
+        return context.raw_review
     return (
         "# Implementation Review\n\n"
         "## Result\n\n"
@@ -181,8 +209,13 @@ def _write_review(context: _ReviewContext, report: str) -> None:
         raise ImplementationReviewError("Review artifact contains unrecognized content")
     report_sha = hashlib.sha256(report.encode("utf-8")).hexdigest()
     context.state["state"] = "REFACTOR"
+    decision = (
+        "semantic_review_passed"
+        if context.state.get("semantic_review") is not None
+        else "invariant_review_passed"
+    )
     context.state["implementation_review"] = {
-        "decision": "invariant_review_passed",
+        "decision": decision,
         "completion_sha256": context.completion_sha256,
         "report_sha256": report_sha,
     }

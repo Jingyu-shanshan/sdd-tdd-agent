@@ -136,7 +136,11 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 ## v0.3: Review, refactor, and observability
 
-- Automated review and behavior-preserving refactoring stages.
+- Typed automated semantic review now covers Clean Code, SOLID, duplication,
+  complexity, readability, bugs, performance, and security through isolated
+  JSON/Codex adapters, exact source locations, deterministic reports, and an
+  approved handoff to the existing integrity gate. Behavior-preserving source
+  refactoring remains the next stage.
 - Quality metrics, test-loop metrics, cost, duration, and failure memory.
 - Human approval gates and Git integration.
 

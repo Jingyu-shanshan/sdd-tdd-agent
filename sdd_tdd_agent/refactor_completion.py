@@ -259,7 +259,7 @@ def _validate_audit_chain(
         raise RefactorVerificationError("Implementation completion is stale")
     completion_sha = canonical_json_sha256(completion)
     if (
-        review["decision"] != "invariant_review_passed"
+        review["decision"] not in {"invariant_review_passed", "semantic_review_passed"}
         or review["completion_sha256"] != completion_sha
     ):
         raise RefactorVerificationError("Implementation review is stale")

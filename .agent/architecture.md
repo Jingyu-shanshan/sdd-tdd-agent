@@ -214,5 +214,14 @@ only when a failing acceptance test requires it.
   collection, result validation, optimistic atomic writes, GREEN digest checks,
   and final REFACTOR audit. Persist a `source_root` only for non-default Angular
   artifacts so legacy three-field records and provider payloads remain exact.
+- Add semantic implementation review as an explicit REVIEW substage before the
+  deterministic integrity transition. Revalidate completion and final source
+  digests, then expose only the final test/production snapshots and completion
+  identity through a versioned Prompt and strict injected JSON/Codex reviewer.
+  Validate closed review areas/severities, exact visible paths and line numbers,
+  decision consistency, bounded text, source-copy rejection, and duplicates
+  before atomically recording a source-free report. Keep required changes in
+  REVIEW; only an approved digest-bound semantic record may be preserved by
+  `agent review` while entering REFACTOR. Retain the invariant-only legacy path.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

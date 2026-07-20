@@ -318,8 +318,30 @@ Implementation ready for review: feature-1 (1 tests GREEN)
 Stale artifacts, incomplete plans, malformed evidence, concurrent state
 changes, or atomic collisions preserve GREEN for safe recovery.
 
-Run the deterministic implementation audit after the exhausted plan enters
-REVIEW:
+After the exhausted plan enters REVIEW, an explicit semantic review can inspect
+only the digest-bound final test and production source through the selected
+Provider:
+
+```bash
+uv run agent review semantic
+```
+
+The versioned semantic Prompt and strict JSON/Codex adapters classify concrete
+findings across Clean Code, SOLID, duplication, complexity, readability,
+potential bugs, performance, and security. Every finding has a stable ID,
+closed severity, exact visible path, valid one-based line, message, and
+recommendation. Codex runs from a project-external ephemeral read-only exchange;
+the model never receives requirements, design, tasks, process output, raw state,
+credentials, or unrestricted repository access. Outputs that copy source or
+look like credentials are rejected.
+
+The command writes a deterministic source-free `review.md` plus a completion-
+and-report-digest-bound state record, but intentionally remains in REVIEW.
+`changes_required` findings block progression; an approved review is still
+subject to the deterministic integrity audit. Projects that do not request the
+semantic step retain the compatible invariant-only path.
+
+Run the deterministic implementation audit after the optional semantic review:
 
 ```bash
 uv run agent review
@@ -329,8 +351,10 @@ The command verifies the digest-bound completion snapshot against the retained
 completed-test prefix, final test, GREEN evidence, and test/production artifact
 records. It writes a bounded `review.md` containing IDs, counts, and digests—no
 source or process output—then atomically enters REFACTOR. It invokes no model,
-test runner, or shell command. The report explicitly marks semantic automated
-code review as deferred to v0.3 instead of claiming uncomputed findings.
+test runner, or shell command. Without a semantic report, its legacy report
+explicitly states that semantic findings were not computed. With an approved
+semantic record, it preserves that report and records `semantic_review_passed`
+before entering REFACTOR.
 
 Finish the v0.1 workflow with deterministic refactor verification:
 
