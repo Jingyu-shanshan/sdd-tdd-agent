@@ -265,12 +265,19 @@ return the complete content of exactly one minimal production file. Strict JSON
 and isolated ephemeral read-only Codex adapters never receive requirement,
 design, task, complete-plan, future-test, or raw Session content.
 
-The writer permits only normalized supported source files below `src/` and
-rejects test-like paths, configuration/build files, hidden paths, traversal,
-symbolic links, stale targets, invalid UTF-8, and temporary collisions. Existing
-source is replaced only if its captured content is unchanged; one safe new
-source may be created. Success atomically records the production file ID, path,
-and SHA-256 and advances only RED to IMPLEMENT:
+The writer permits only normalized supported source files below the current
+verified production root. Generic, Java, and root TypeScript projects retain
+the exact `src/**` boundary. Angular cases resolve their owning application or
+library from strict `angular.json` metadata and may write only below that
+project's configured `sourceRoot`, including monorepo roots such as
+`projects/shared/src/**`; sibling projects remain inaccessible. The Blind
+Angular provider sees only this normalized writable root, never workspace
+metadata. Test-like paths, configuration/build files, hidden paths, traversal,
+symbolic links, stale targets, invalid UTF-8, and temporary collisions are
+rejected. Existing source is replaced only if its captured content is
+unchanged; one safe new source may be created. Success atomically records the
+production file ID, path, SHA-256, and any non-default Angular root, then
+advances only RED to IMPLEMENT:
 
 ```text
 Production source ready for GREEN: feature-1 (TC1 -> src/export.ts)
@@ -339,6 +346,11 @@ zero exits. It stores only sanitized bounded final evidence and atomically
 enters DONE. Any failed process, changed source or state, stale record, unsafe
 path, or concurrent update preserves REFACTOR. Automated behavior-preserving
 source refactoring remains planned for v0.3.
+
+For Angular monorepos, GREEN, completion, review, and final REFACTOR
+verification retain and revalidate the exact recorded source-root boundary as
+well as the digest. Changing the artifact path or widening it to another
+configured Angular project invalidates the audit chain.
 
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies

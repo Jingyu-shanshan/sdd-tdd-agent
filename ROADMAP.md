@@ -129,7 +129,10 @@ and validate the core workflow; it is not the only planned ecosystem.
   facilities they require instead of silently migrating the toolchain.
 - Component templates, dependency injection, and asynchronous behavior are
   explicit typed fields in test plans and rendered acceptance evidence.
-- Extend Blind production writes to verified Angular monorepo source roots.
+- Blind production collection, generation, atomic writes, GREEN verification,
+  and final audit now use the current Angular test's exact verified project
+  `sourceRoot`, including monorepo application/library roots, while preserving
+  the legacy `src/**` boundary for other workflows.
 
 ## v0.3: Review, refactor, and observability
 

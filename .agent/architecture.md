@@ -207,5 +207,12 @@ only when a failing acceptance test requires it.
   verified official plan and explicit interactive confirmation. Download and
   execution are separate tokenized `shell=False` processes; successful install
   must be followed by executable and version verification before selection.
+- Resolve Blind production write permissions from the typed current test. Keep
+  generic workflows at `src/**`; for Angular, map the current case's project to
+  its strictly parsed configured `sourceRoot` and expose only that normalized
+  boundary through a dedicated versioned Prompt. Apply the same root to source
+  collection, result validation, optimistic atomic writes, GREEN digest checks,
+  and final REFACTOR audit. Persist a `source_root` only for non-default Angular
+  artifacts so legacy three-field records and provider payloads remain exact.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

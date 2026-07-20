@@ -3,14 +3,17 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import ClassVar, Dict, Tuple
+from typing import ClassVar, Dict, Optional, Tuple
 
 from sdd_tdd_agent.cycle_completion import canonical_json_sha256
 from sdd_tdd_agent.execution_config import (
     load_full_test_suite_timeout,
     load_test_command_timeout,
 )
-from sdd_tdd_agent.production_source_generation import production_source_path
+from sdd_tdd_agent.production_source_generation import (
+    production_source_path,
+    production_source_roots_for_case,
+)
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.red_execution import (
     MAX_EVIDENCE_STREAM_CHARACTERS,
@@ -18,6 +21,7 @@ from sdd_tdd_agent.red_execution import (
     TestCommandRunner,
     sanitize_test_evidence,
 )
+from sdd_tdd_agent.tdd_cycle import load_planned_test_case
 
 
 COMPLETION_FIELDS = {
@@ -31,6 +35,7 @@ REVIEW_FIELDS = {"decision", "completion_sha256", "report_sha256"}
 GREEN_FIELDS = {"test_id", "current_test", "full_suite"}
 PROCESS_FIELDS = {"command", "returncode", "stdout", "stderr"}
 ARTIFACT_FIELDS = {"test_id", "file_path", "sha256"}
+ANGULAR_ARTIFACT_FIELDS = ARTIFACT_FIELDS | {"source_root"}
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
@@ -53,6 +58,7 @@ class _Artifact:
     test_id: str
     file_path: str
     sha256: str
+    source_root: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -89,20 +95,32 @@ def _digest(value: object, label: str) -> str:
     return value
 
 
-def _artifact(value: object, final_test: str, label: str) -> _Artifact:
-    if not isinstance(value, dict) or set(value) != ARTIFACT_FIELDS:
+def _artifact(
+    value: object,
+    final_test: str,
+    label: str,
+    expected_source_root: Optional[str] = None,
+) -> _Artifact:
+    allowed_fields = (
+        {frozenset(ARTIFACT_FIELDS), frozenset(ANGULAR_ARTIFACT_FIELDS)}
+        if label == "Final production"
+        else {frozenset(ARTIFACT_FIELDS)}
+    )
+    if not isinstance(value, dict) or set(value) not in allowed_fields:
         raise RefactorVerificationError(f"{label} artifact is invalid")
     test_id = value["test_id"]
     file_path = value["file_path"]
     digest = value["sha256"]
+    source_root = value.get("source_root")
     if (
         test_id != final_test
         or not isinstance(file_path, str)
         or not isinstance(digest, str)
         or SHA256_PATTERN.fullmatch(digest) is None
+        or source_root != expected_source_root
     ):
         raise RefactorVerificationError(f"{label} artifact is stale")
-    return _Artifact(final_test, file_path, digest)
+    return _Artifact(final_test, file_path, digest, source_root)
 
 
 def _test_path(value: str) -> PurePosixPath:
@@ -142,13 +160,28 @@ def _validate_artifacts(
     completion: Dict[str, object],
 ) -> None:
     test = _artifact(state.get("test_source"), final_test, "Final test")
+    try:
+        session_id = state["session_id"]
+        if not isinstance(session_id, str):
+            raise ValueError("Session identifier is invalid")
+        case = load_planned_test_case(root, session_id, final_test)
+        source_roots = production_source_roots_for_case(root, case)
+    except (OSError, UnicodeError, KeyError, ValueError) as error:
+        raise RefactorVerificationError(
+            "Final production artifact path is unsafe"
+        ) from error
+    expected_root = source_roots[0] if source_roots != ("src",) else None
     production = _artifact(
         state.get("production_source"),
         final_test,
         "Final production",
+        expected_root,
     )
     try:
-        production_path = production_source_path(production.file_path)
+        production_path = production_source_path(
+            production.file_path,
+            source_roots,
+        )
     except ValueError as error:
         raise RefactorVerificationError(
             "Final production artifact path is unsafe"

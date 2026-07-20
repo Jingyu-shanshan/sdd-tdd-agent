@@ -182,6 +182,28 @@ def _parse_cases(
     return cases
 
 
+def load_planned_test_case(
+    root: Path,
+    session_id: str,
+    test_id: str,
+) -> TestCasePlan:
+    """Load one context-validated planned case without relying on workflow state."""
+    if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", session_id) is None:
+        raise ValueError("Invalid Session identifier")
+    session = root / ".agent" / "sessions" / session_id
+    tasks = (session / "tasks.md").read_text(encoding="utf-8")
+    plan = (session / "test-plan.md").read_text(encoding="utf-8")
+    cases = _parse_cases(
+        plan,
+        _extract_task_ids(tasks),
+        _load_angular_context(root),
+    )
+    for case in cases:
+        if case.test_id == test_id:
+            return case
+    raise ValueError("Planned test case does not exist")
+
+
 def _has_approval(state: Dict[str, object], key: str) -> bool:
     value = state.get(key)
     return isinstance(value, dict) and value.get("decision") == "approved"
