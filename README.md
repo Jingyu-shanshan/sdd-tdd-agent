@@ -203,6 +203,15 @@ Provider with:
 uv run agent tests
 ```
 
+Detected Angular projects use the dedicated `v2-angular` test Prompt and strict
+workspace context. Every planned case identifies its configured Angular
+project and one supported component, service, directive, pipe, routing, form,
+or HTTP subject. Testing facilities, template contracts, dependency-injection
+behavior, and asynchronous behavior remain explicit in both typed JSON and
+rendered Markdown. Each `.spec.ts` path must remain under that project's
+configured `sourceRoot`, and the implementation-cycle parser restores the same
+typed metadata before selecting exactly one current test.
+
 The command requires `TEST_GENERATION` plus all three approvals. Valid output
 writes `test-plan.md` and enters `IMPLEMENTATION`; configuration, state, or model
 failure does not advance the Session.

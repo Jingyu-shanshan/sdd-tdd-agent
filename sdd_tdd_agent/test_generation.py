@@ -2,12 +2,22 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import ClassVar, Dict, Protocol, Set, Tuple
+from typing import ClassVar, Dict, Optional, Protocol, Set, Tuple
+
+from sdd_tdd_agent.angular_workspace import AngularWorkspace, load_angular_workspace
+from sdd_tdd_agent.project_detection import detect_project
 
 
 PROMPT_VERSION = "v1"
+ANGULAR_PROMPT_VERSION = "v2-angular"
 PROMPT_PATH = (
     Path(__file__).parent / "prompts" / "test_generation" / f"{PROMPT_VERSION}.md"
+)
+ANGULAR_PROMPT_PATH = (
+    Path(__file__).parent
+    / "prompts"
+    / "test_generation"
+    / f"{ANGULAR_PROMPT_VERSION}.md"
 )
 REQUIREMENT_HEADING = "# Requirement Analysis"
 DESIGN_HEADING = "# Design Proposal"
@@ -23,6 +33,27 @@ PHASES = (
     "integration",
     "regression",
 )
+ANGULAR_SUBJECT_KINDS = {
+    "component",
+    "directive",
+    "form",
+    "http",
+    "pipe",
+    "routing",
+    "service",
+}
+
+
+@dataclass(frozen=True)
+class AngularTestCasePlan:
+    """Explicit Angular testing context for one incremental test case."""
+
+    project: str
+    subject_kind: str
+    test_facilities: Tuple[str, ...]
+    template_contracts: Tuple[str, ...]
+    dependency_injection: Tuple[str, ...]
+    async_behavior: Tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -39,6 +70,7 @@ class TestGenerationRequest:
     project_metadata: str
     architecture: str
     conventions: str
+    angular_context: Optional[AngularWorkspace] = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +90,7 @@ class TestCasePlan:
     action: str
     expected_outcomes: Tuple[str, ...]
     dependencies: Tuple[str, ...]
+    angular: Optional[AngularTestCasePlan] = None
 
 
 @dataclass(frozen=True)
@@ -103,6 +136,17 @@ def _extract_task_ids(tasks: str) -> Tuple[str, ...]:
     return task_ids
 
 
+def _load_angular_context(root: Path) -> Optional[AngularWorkspace]:
+    profile = detect_project(root)
+    if (
+        profile is None
+        or profile.target_language != "typescript"
+        or profile.test_frameworks != ("angular",)
+    ):
+        return None
+    return load_angular_workspace(root)
+
+
 def load_test_generation_request(
     root: Path,
     session_id: str,
@@ -123,15 +167,21 @@ def load_test_generation_request(
     if not tasks.strip() or not tasks.lstrip().startswith(TASK_HEADING):
         raise ValueError("Test generation requires generated tasks")
     _extract_task_ids(tasks)
+    angular_context = _load_angular_context(root)
+    prompt_version = (
+        ANGULAR_PROMPT_VERSION if angular_context is not None else PROMPT_VERSION
+    )
+    prompt_path = ANGULAR_PROMPT_PATH if angular_context is not None else PROMPT_PATH
     return TestGenerationRequest(
-        prompt_version=PROMPT_VERSION,
-        prompt=PROMPT_PATH.read_text(encoding="utf-8"),
+        prompt_version=prompt_version,
+        prompt=prompt_path.read_text(encoding="utf-8"),
         requirement=requirement,
         design=design,
         tasks=tasks,
         project_metadata=(workspace / "project.yml").read_text(encoding="utf-8"),
         architecture=(workspace / "architecture.md").read_text(encoding="utf-8"),
         conventions=(workspace / "conventions.md").read_text(encoding="utf-8"),
+        angular_context=angular_context,
     )
 
 
@@ -155,6 +205,25 @@ def _render_case(case: TestCasePlan) -> str:
         f"### Expected outcomes\n\n{_render_items(case.expected_outcomes)}",
         f"### Dependencies\n\n{_render_items(case.dependencies)}",
     )
+    angular = case.angular
+    if angular is not None:
+        sections += (
+            f"### Angular project\n\n`{angular.project}`",
+            f"### Angular subject\n\n`{angular.subject_kind}`",
+            (
+                "### Angular test facilities\n\n"
+                f"{_render_items(angular.test_facilities)}"
+            ),
+            (
+                "### Angular template contracts\n\n"
+                f"{_render_items(angular.template_contracts)}"
+            ),
+            (
+                "### Angular dependency injection\n\n"
+                f"{_render_items(angular.dependency_injection)}"
+            ),
+            (f"### Angular async behavior\n\n{_render_items(angular.async_behavior)}"),
+        )
     return "\n\n".join(sections)
 
 
@@ -238,7 +307,52 @@ def _validate_case(
     return phase_rank
 
 
-def _validate_plan(plan: GeneratedTestPlan, task_ids: Tuple[str, ...]) -> None:
+def _validate_angular_test_file(
+    test_file: str,
+    source_root: str,
+) -> None:
+    path = PurePosixPath(test_file)
+    root_parts = PurePosixPath(source_root).parts
+    if path.parts[: len(root_parts)] != root_parts:
+        raise ValueError("Angular test file must use its project source root")
+    if not path.name.endswith(".spec.ts"):
+        raise ValueError("Angular test file must end with .spec.ts")
+
+
+def _validate_angular_case(
+    case: TestCasePlan,
+    context: Optional[AngularWorkspace],
+) -> None:
+    angular = case.angular
+    if context is None:
+        if angular is not None:
+            raise ValueError("Non-Angular test plan contains Angular metadata")
+        return
+    if angular is None:
+        raise ValueError("Angular test metadata must be present for every case")
+    if not isinstance(angular, AngularTestCasePlan):
+        raise ValueError("Angular test metadata has invalid type")
+    if angular.subject_kind not in ANGULAR_SUBJECT_KINDS:
+        raise ValueError("Angular test subject kind is unsupported")
+    projects = {project.name: project for project in context.projects}
+    project = projects.get(angular.project)
+    if project is None:
+        raise ValueError("Angular test project is not configured")
+    _validate_angular_test_file(case.test_file, project.source_root)
+    _validate_items("Angular test facilities", angular.test_facilities, required=True)
+    for name, items in (
+        ("Angular template contracts", angular.template_contracts),
+        ("Angular dependency injection", angular.dependency_injection),
+        ("Angular async behavior", angular.async_behavior),
+    ):
+        _validate_items(name, items, required=False)
+
+
+def _validate_plan(
+    plan: GeneratedTestPlan,
+    task_ids: Tuple[str, ...],
+    angular_context: Optional[AngularWorkspace] = None,
+) -> None:
     _validate_text("plan summary", plan.summary)
     if not isinstance(plan.cases, tuple) or not plan.cases:
         raise ValueError("Test plan cases must not be empty")
@@ -259,6 +373,7 @@ def _validate_plan(plan: GeneratedTestPlan, task_ids: Tuple[str, ...]) -> None:
             preceding_ids,
             previous_phase,
         )
+        _validate_angular_case(case, angular_context)
         preceding_ids.add(case.test_id)
         covered_tasks.add(case.task_id)
     if covered_tasks != approved_tasks:
@@ -311,7 +426,7 @@ def run_test_generation(
     plan = generator.generate(request)
     if not isinstance(plan, GeneratedTestPlan):
         raise ValueError("Generator must return GeneratedTestPlan")
-    _validate_plan(plan, _extract_task_ids(request.tasks))
+    _validate_plan(plan, _extract_task_ids(request.tasks), request.angular_context)
 
     next_state = "IMPLEMENTATION"
     state["state"] = next_state

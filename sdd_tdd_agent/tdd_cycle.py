@@ -4,10 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Set, Tuple
 
+from sdd_tdd_agent.angular_workspace import AngularWorkspace
 from sdd_tdd_agent.test_generation import (
+    AngularTestCasePlan,
     GeneratedTestPlan,
     TestCasePlan,
     _extract_task_ids,
+    _load_angular_context,
     _validate_plan,
 )
 
@@ -32,6 +35,14 @@ CASE_SECTIONS = {
     "Action",
     "Expected outcomes",
     "Dependencies",
+}
+ANGULAR_CASE_SECTIONS = {
+    "Angular project",
+    "Angular subject",
+    "Angular test facilities",
+    "Angular template contracts",
+    "Angular dependency injection",
+    "Angular async behavior",
 }
 PROGRESS_FIELDS = {"current_test", "phase", "completed_tests"}
 TDD_PHASES = {"WRITE_TEST", "RED", "IMPLEMENT", "GREEN"}
@@ -98,12 +109,43 @@ def _parse_code_value(value: str, field: str) -> str:
     return normalized[1:-1]
 
 
+def _parse_angular_case(sections: Dict[str, str]) -> AngularTestCasePlan:
+    return AngularTestCasePlan(
+        project=_parse_code_value(sections["Angular project"], "Angular project"),
+        subject_kind=_parse_code_value(
+            sections["Angular subject"],
+            "Angular subject",
+        ),
+        test_facilities=_parse_items(
+            sections["Angular test facilities"],
+            "Angular test facilities",
+        ),
+        template_contracts=_parse_items(
+            sections["Angular template contracts"],
+            "Angular template contracts",
+        ),
+        dependency_injection=_parse_items(
+            sections["Angular dependency injection"],
+            "Angular dependency injection",
+        ),
+        async_behavior=_parse_items(
+            sections["Angular async behavior"],
+            "Angular async behavior",
+        ),
+    )
+
+
 def _parse_case(match: re.Match[str]) -> TestCasePlan:
     test_id, title, body = match.groups()
     if not body.startswith("Status: pending\n\n"):
         raise ValueError("Generated test status is invalid")
     sections = dict(SECTION_PATTERN.findall(body))
-    if set(sections) != CASE_SECTIONS:
+    section_names = set(sections)
+    if section_names == CASE_SECTIONS:
+        angular = None
+    elif section_names == CASE_SECTIONS | ANGULAR_CASE_SECTIONS:
+        angular = _parse_angular_case(sections)
+    else:
         raise ValueError("Generated test sections do not match schema")
     return TestCasePlan(
         test_id=test_id,
@@ -120,11 +162,14 @@ def _parse_case(match: re.Match[str]) -> TestCasePlan:
             "expected outcomes",
         ),
         dependencies=_parse_items(sections["Dependencies"], "dependencies"),
+        angular=angular,
     )
 
 
 def _parse_cases(
-    plan_content: str, task_ids: Tuple[str, ...]
+    plan_content: str,
+    task_ids: Tuple[str, ...],
+    angular_context: Optional[AngularWorkspace] = None,
 ) -> Tuple[TestCasePlan, ...]:
     if not plan_content.lstrip().startswith(PLAN_HEADING):
         raise ValueError("TDD cycle requires a generated test plan")
@@ -133,7 +178,7 @@ def _parse_cases(
         raise ValueError("Generated test plan contains no cases")
     cases = tuple(_parse_case(match) for match in matches)
     parsed_plan = GeneratedTestPlan("Validated generated plan", cases, (), ())
-    _validate_plan(parsed_plan, task_ids)
+    _validate_plan(parsed_plan, task_ids, angular_context)
     return cases
 
 
@@ -189,7 +234,11 @@ def _load_cycle_context(root: Path, session_id: str) -> _CycleContext:
             raise ValueError("TDD cycle requires all prior approvals")
     tasks = (session / "tasks.md").read_text(encoding="utf-8")
     plan = (session / "test-plan.md").read_text(encoding="utf-8")
-    cases = _parse_cases(plan, _extract_task_ids(tasks))
+    cases = _parse_cases(
+        plan,
+        _extract_task_ids(tasks),
+        _load_angular_context(root),
+    )
     case_ids = tuple(case.test_id for case in cases)
     completed, phase = _validate_progress(state.get("tdd_cycle"), case_ids)
     return _CycleContext(session, state, cases, completed, phase)

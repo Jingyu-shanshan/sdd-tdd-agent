@@ -122,12 +122,14 @@ and validate the core workflow; it is not the only planned ecosystem.
   package and `angular.json` metadata.
 - Typed Angular architecture constraints and project-source-root boundaries are
   captured in deterministic SDD design documents.
-- Support incremental tests for components, services, directives, pipes,
-  routing, forms, and HTTP integrations.
-- Use the test runner and Angular testing facilities already configured by the
-  target project instead of silently migrating its toolchain.
-- Keep component templates, dependency injection, and asynchronous behavior
-  visible in test plans and acceptance criteria.
+- Typed incremental test plans now support component, service, directive, pipe,
+  routing, form, and HTTP subjects with exact `.spec.ts` project-source-root
+  boundaries and lossless one-current-test TDD parsing.
+- Angular plans retain the configured runner and explicitly name the testing
+  facilities they require instead of silently migrating the toolchain.
+- Component templates, dependency injection, and asynchronous behavior are
+  explicit typed fields in test plans and rendered acceptance evidence.
+- Extend Blind production writes to verified Angular monorepo source roots.
 
 ## v0.3: Review, refactor, and observability
 

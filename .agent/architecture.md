@@ -92,7 +92,12 @@ only when a failing acceptance test requires it.
   Require all three human approvals, cover every approved task, enforce the
   happy/boundary/exception/integration/regression order and only preceding-test
   dependencies, validate relative target paths before mutation, and enter
-  IMPLEMENTATION without writing or running test code.
+  IMPLEMENTATION without writing or running test code. For verified Angular
+  projects, select a dedicated Prompt, carry strict workspace boundaries, and
+  require every case to identify its configured project, supported subject,
+  testing facilities, template contracts, dependency-injection behavior, and
+  asynchronous behavior. Constrain Angular cases to exact `.spec.ts` paths
+  below their project source root.
 - Implement test-plan model integration in a separate adapter module. Decode
   exact nested case objects through provider-neutral JSON or the existing
   ephemeral read-only Codex exchange, reuse injected process/resolver contracts,
@@ -101,6 +106,8 @@ only when a failing acceptance test requires it.
   the configured test-plan adapter and delegates approvals, semantics, and
   artifact/state mutation to the core workflow.
 - Parse only deterministic generated test plans when entering implementation.
+  Accept either the exact legacy section set or the exact Angular extension,
+  reconstruct typed Angular metadata, and re-run contextual plan validation.
   Track an ordered completed-test prefix and one current cycle in Session state;
   keep the developer context restricted to the current test, production source,
   and compiler/test output.

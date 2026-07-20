@@ -11,6 +11,7 @@ from sdd_tdd_agent.model_adapter import (
     SystemCodexCommandResolver,
 )
 from sdd_tdd_agent.test_generation import (
+    AngularTestCasePlan,
     GeneratedTestPlan,
     TestCasePlan,
     TestGenerationRequest,
@@ -29,6 +30,15 @@ CASE_FIELDS = (
     "action",
     "expected_outcomes",
     "dependencies",
+)
+OPTIONAL_CASE_FIELDS = ("angular",)
+ANGULAR_CASE_FIELDS = (
+    "project",
+    "subject_kind",
+    "test_facilities",
+    "template_contracts",
+    "dependency_injection",
+    "async_behavior",
 )
 PLAN_FIELDS = (
     "summary",
@@ -64,6 +74,31 @@ CASE_SCHEMA: Dict[str, object] = {
             "items": {"type": "string"},
         },
         "dependencies": {"type": "array", "items": {"type": "string"}},
+        "angular": {
+            "type": "object",
+            "properties": {
+                "project": {"type": "string"},
+                "subject_kind": {"type": "string"},
+                "test_facilities": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "template_contracts": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "dependency_injection": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "async_behavior": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+            },
+            "required": list(ANGULAR_CASE_FIELDS),
+            "additionalProperties": False,
+        },
     },
     "required": list(CASE_FIELDS),
     "additionalProperties": False,
@@ -88,8 +123,8 @@ class TestPlanGeneratorError(RequirementAnalyzerError):
     __test__ = False
 
 
-def _request_payload(request: TestGenerationRequest) -> Dict[str, str]:
-    return {
+def _request_payload(request: TestGenerationRequest) -> Dict[str, object]:
+    payload: Dict[str, object] = {
         "prompt_version": request.prompt_version,
         "prompt": request.prompt,
         "requirement": request.requirement,
@@ -99,6 +134,22 @@ def _request_payload(request: TestGenerationRequest) -> Dict[str, str]:
         "architecture": request.architecture,
         "conventions": request.conventions,
     }
+    angular = request.angular_context
+    if angular is not None:
+        payload["angular_context"] = {
+            "version": angular.version,
+            "projects": [
+                {
+                    "name": project.name,
+                    "project_type": project.project_type,
+                    "root": project.root,
+                    "source_root": project.source_root,
+                    "prefix": project.prefix,
+                }
+                for project in angular.projects
+            ],
+        }
+    return payload
 
 
 def _string_tuple(
@@ -112,12 +163,36 @@ def _string_tuple(
     return tuple(value)
 
 
+def _decode_angular_case(value: object, subject: str) -> AngularTestCasePlan:
+    if not isinstance(value, dict) or set(value) != set(ANGULAR_CASE_FIELDS):
+        raise TestPlanGeneratorError(f"{subject} Angular keys do not match schema")
+    payload: Dict[str, object] = value
+    project = payload["project"]
+    subject_kind = payload["subject_kind"]
+    if not isinstance(project, str) or not isinstance(subject_kind, str):
+        raise TestPlanGeneratorError(f"{subject} Angular field has invalid type")
+    return AngularTestCasePlan(
+        project=project,
+        subject_kind=subject_kind,
+        test_facilities=_string_tuple(payload, "test_facilities", subject),
+        template_contracts=_string_tuple(payload, "template_contracts", subject),
+        dependency_injection=_string_tuple(
+            payload,
+            "dependency_injection",
+            subject,
+        ),
+        async_behavior=_string_tuple(payload, "async_behavior", subject),
+    )
+
+
 def _decode_case(value: object, index: int) -> TestCasePlan:
     subject = f"Test plan generator case {index}"
     if not isinstance(value, dict):
         raise TestPlanGeneratorError(f"{subject} must be a JSON object")
     payload: Dict[str, object] = value
-    if set(payload) != set(CASE_FIELDS):
+    fields = set(payload)
+    allowed = set(CASE_FIELDS) | set(OPTIONAL_CASE_FIELDS)
+    if not set(CASE_FIELDS).issubset(fields) or not fields.issubset(allowed):
         raise TestPlanGeneratorError(f"{subject} keys do not match schema")
     for key in STRING_CASE_FIELDS:
         if not isinstance(payload[key], str):
@@ -134,6 +209,11 @@ def _decode_case(value: object, index: int) -> TestCasePlan:
         action=cast(str, payload["action"]),
         expected_outcomes=_string_tuple(payload, "expected_outcomes", subject),
         dependencies=_string_tuple(payload, "dependencies", subject),
+        angular=(
+            _decode_angular_case(payload["angular"], subject)
+            if "angular" in payload
+            else None
+        ),
     )
 
 
