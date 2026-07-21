@@ -384,6 +384,23 @@ verification retain and revalidate the exact recorded source-root boundary as
 well as the digest. Changing the artifact path or widening it to another
 configured Angular project invalidates the audit chain.
 
+Workflow model and test calls produce privacy-safe active-Session telemetry:
+
+```bash
+uv run agent metrics
+```
+
+The CLI decorates the existing injected runners, so adapters and workflow logic
+remain unchanged. Each bounded append-only event records the operation, model or
+test kind, sanitized executable name, success/return code, duration, and only a
+Prompt version plus SHA-256 identity. It never stores Prompt/source/review text,
+command arguments, stdout, stderr, credentials, or personal data. Current
+Provider protocols do not expose verified token or billing data, so token and
+cost values are explicitly reported as unavailable rather than estimated.
+Strict aggregation reports call counts, success rate, total duration, and usage
+when a future verified Provider supplies it. Runtime files remain below the
+ignored `.agent/metrics/` directory.
+
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies
 every state transition, explicit human gate, Blind production context, exact

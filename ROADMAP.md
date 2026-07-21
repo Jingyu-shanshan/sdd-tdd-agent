@@ -145,7 +145,12 @@ and validate the core workflow; it is not the only planned ecosystem.
   digest-bound optimistic writes, the retained current/full-suite gates, and
   automatic source/state rollback on failed verification. The legacy
   no-source-change finalizer remains compatible.
-- Quality metrics, test-loop metrics, cost, duration, and failure memory.
+- Privacy-safe append-only model/test telemetry now records Prompt identity,
+  tool kind, outcomes, duration, and honest typed token/cost availability.
+  `agent metrics` strictly aggregates active-Session call counts, success rate,
+  duration, and verified usage without storing request, source, command, or
+  output content.
+- Task/quality completion metrics and failure memory.
 - Human approval gates and Git integration.
 
 ## v1.0: Model and ecosystem extensibility

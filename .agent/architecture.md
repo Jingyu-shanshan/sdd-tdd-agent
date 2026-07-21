@@ -231,5 +231,13 @@ only when a failing acceptance test requires it.
   same-path result, atomically bind before/after digests, reuse both final test
   gates, and restore source/state on failure. Keep invariant-only Sessions on
   the existing no-source-change path.
+- Observe workflow model/test calls by decorating the two existing injected
+  runner interfaces at CLI composition. Append only bounded allowlisted events
+  under `.agent/metrics`: operation, kind, sanitized tool, outcome, duration,
+  and Prompt version/digest. Never persist request/output/argument content.
+  Keep token/cost fields typed but unavailable until a verified Provider
+  contract supplies them; never estimate billing. Strictly aggregate active-
+  Session call counts, rates, duration, and complete reported usage through
+  `agent metrics`.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

@@ -58,6 +58,13 @@ from sdd_tdd_agent.requirement_review import (
 from sdd_tdd_agent.semantic_review import SemanticReviewError
 from sdd_tdd_agent.semantic_review_command import run_active_semantic_review
 from sdd_tdd_agent.task_command import generate_active_tasks
+from sdd_tdd_agent.telemetry import (
+    TelemetryError,
+    load_session_metrics,
+    observe_process_runner,
+    observe_test_runner,
+    render_session_metrics,
+)
 from sdd_tdd_agent.task_review import (
     TaskReviewError,
     approve_active_tasks,
@@ -125,6 +132,18 @@ def main(
         output.write(render_project_status(status))
         return 0
 
+    if arguments == ["metrics"]:
+        try:
+            status = load_project_status(project_root)
+            if status.current_session is None:
+                raise TelemetryError("Project has no active Session")
+            metrics = load_session_metrics(project_root, status.current_session)
+        except (OSError, UnicodeError, ValueError, TelemetryError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_session_metrics(metrics))
+        return 0
+
     if arguments and arguments[0] == "feature":
         description = " ".join(arguments[1:])
         session = create_feature_session(project_root, description)
@@ -138,10 +157,14 @@ def main(
         return 0
 
     if arguments == ["review", "semantic"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "semantic_review",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = run_active_semantic_review(project_root, process_runner)
-        except (ValueError, SemanticReviewError) as error:
+        except (ValueError, SemanticReviewError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -164,10 +187,14 @@ def main(
         return 0
 
     if arguments == ["refactor"]:
-        command_runner = test_runner or SystemTestCommandRunner()
+        command_runner = observe_test_runner(
+            project_root,
+            "refactor_verification",
+            test_runner or SystemTestCommandRunner(),
+        )
         try:
             run = complete_active_refactor(project_root, command_runner)
-        except (RefactorVerificationError, RedExecutionError) as error:
+        except (RefactorVerificationError, RedExecutionError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -177,8 +204,16 @@ def main(
         return 0
 
     if arguments == ["refactor", "automated"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
-        command_runner = test_runner or SystemTestCommandRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "automated_refactor",
+            runner if runner is not None else SubprocessRunner(),
+        )
+        command_runner = observe_test_runner(
+            project_root,
+            "automated_refactor_verification",
+            test_runner or SystemTestCommandRunner(),
+        )
         try:
             config = load_analyzer_config(project_root)
             generator = (
@@ -195,7 +230,12 @@ def main(
                 generator,
                 command_runner,
             )
-        except (ValueError, RequirementAnalyzerError, AutomatedRefactorError) as error:
+        except (
+            ValueError,
+            RequirementAnalyzerError,
+            AutomatedRefactorError,
+            TelemetryError,
+        ) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -205,10 +245,14 @@ def main(
         return 0
 
     if arguments and arguments[0] == "analyze":
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "requirement_analysis",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = analyze_active_requirement(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -218,20 +262,28 @@ def main(
         return 0
 
     if arguments == ["design"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "design_generation",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = generate_active_design(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Design ready for review: {run.session_id} ({run.next_state})\n")
         return 0
 
     if arguments == ["tasks"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "task_breakdown",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = generate_active_tasks(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Tasks ready for review: {run.session_id} ({run.next_state})\n")
@@ -288,10 +340,14 @@ def main(
         return 0
 
     if arguments == ["tests"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "test_generation",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = generate_active_test_plan(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -300,8 +356,16 @@ def main(
         return 0
 
     if arguments == ["continue"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
-        command_runner = test_runner or SystemTestCommandRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "implementation_generation",
+            runner if runner is not None else SubprocessRunner(),
+        )
+        command_runner = observe_test_runner(
+            project_root,
+            "tdd_test_execution",
+            test_runner or SystemTestCommandRunner(),
+        )
         try:
             run = continue_active_implementation(
                 project_root,
@@ -316,6 +380,7 @@ def main(
             CycleCompletionError,
             ProductionSourceWorkspaceError,
             TestSourceWorkspaceError,
+            TelemetryError,
         ) as error:
             error_output.write(f"Error: {error}\n")
             return 2
