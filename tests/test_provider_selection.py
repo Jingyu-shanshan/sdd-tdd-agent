@@ -71,7 +71,7 @@ requirement_analyzer_timeout_seconds: 45
     ("provider_key", "message"),
     [
         ("unknown", "Unknown provider: unknown"),
-        ("claude-code", r"Provider is not selectable: claude-code \(planned\)"),
+        ("copilot", r"Provider is not selectable: copilot \(planned\)"),
         (
             "custom-json",
             "Provider requires explicit command configuration: custom-json",
@@ -113,7 +113,7 @@ def test_should_select_provider_through_cli(tmp_path: Path) -> None:
     )
 
 
-def test_should_report_planned_provider_through_cli(tmp_path: Path) -> None:
+def test_should_select_cursor_through_cli(tmp_path: Path) -> None:
     config_path, _ = _write_workspace(tmp_path)
     output = io.StringIO()
     error_output = io.StringIO()
@@ -125,9 +125,10 @@ def test_should_report_planned_provider_through_cli(tmp_path: Path) -> None:
         root=tmp_path,
     )
 
-    assert exit_code == 2
-    assert output.getvalue() == ""
-    assert error_output.getvalue() == (
-        "Error: Provider is not selectable: cursor (planned)\n"
+    assert exit_code == 0
+    assert output.getvalue() == "Selected provider: cursor\n"
+    assert error_output.getvalue() == ""
+    assert "requirement_analyzer_protocol: cursor-exec" in config_path.read_text(
+        encoding="utf-8"
     )
-    assert config_path.read_text(encoding="utf-8") == ORIGINAL_CONFIG
+    assert '  - "cursor-agent"' in config_path.read_text(encoding="utf-8")

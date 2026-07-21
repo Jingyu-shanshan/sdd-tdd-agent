@@ -66,14 +66,28 @@ PROVIDERS = (
     ProviderDefinition(
         key="claude-code",
         display_name="Claude Code",
-        status="planned",
-        platforms=(),
+        status="adapter-ready",
+        platforms=("macos", "linux-mint"),
+        protocol="claude-exec",
+        command=("claude",),
+        install_plan=ProviderInstallPlan(
+            source_url="https://claude.ai/install.sh",
+            download_command=("curl", "-fsSL", "--output"),
+            installer_command=("sh",),
+        ),
     ),
     ProviderDefinition(
         key="cursor",
         display_name="Cursor",
-        status="planned",
-        platforms=(),
+        status="adapter-ready",
+        platforms=("macos", "linux-mint"),
+        protocol="cursor-exec",
+        command=("cursor-agent",),
+        install_plan=ProviderInstallPlan(
+            source_url="https://cursor.com/install",
+            download_command=("curl", "-fsSL", "--output"),
+            installer_command=("sh",),
+        ),
     ),
     ProviderDefinition(
         key="copilot",
@@ -105,7 +119,12 @@ def render_provider_list(providers: Tuple[ProviderDefinition, ...]) -> str:
 def load_provider_selection(root: Path) -> ProviderSelection:
     """Load the selected provider without executing or resolving its command."""
     config = load_analyzer_config(root)
-    provider_key = "codex" if config.protocol == "codex-exec" else "custom-json"
+    provider_keys = {
+        "codex-exec": "codex",
+        "claude-exec": "claude-code",
+        "cursor-exec": "cursor",
+    }
+    provider_key = provider_keys.get(config.protocol, "custom-json")
     provider = next(item for item in PROVIDERS if item.key == provider_key)
     return ProviderSelection(
         provider_key=provider.key,

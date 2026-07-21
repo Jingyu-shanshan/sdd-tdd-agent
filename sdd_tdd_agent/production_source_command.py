@@ -9,6 +9,7 @@ from sdd_tdd_agent.model_adapter import (
     CodexCommandResolver,
     CommandAnalyzerConfig,
     ProcessRunner,
+    structured_cli_runner,
 )
 from sdd_tdd_agent.production_source_adapter import (
     CodexExecProductionSourceGenerator,
@@ -62,7 +63,10 @@ def _generator(
             root,
             command_resolver=command_resolver,
         )
-    return JsonCommandProductionSourceGenerator(config, runner)
+    return JsonCommandProductionSourceGenerator(
+        config,
+        structured_cli_runner(config, runner),
+    )
 
 
 def _state(root: Path, session_id: str) -> tuple[Path, str, Dict[str, object]]:

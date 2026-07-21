@@ -5,7 +5,11 @@ from sdd_tdd_agent.analyze_command import (
     ActiveSessionError,
     load_analyzer_config,
 )
-from sdd_tdd_agent.model_adapter import CodexCommandResolver, ProcessRunner
+from sdd_tdd_agent.model_adapter import (
+    CodexCommandResolver,
+    ProcessRunner,
+    structured_cli_runner,
+)
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.task_adapter import (
     CodexExecTaskBreakdownGenerator,
@@ -34,6 +38,6 @@ def generate_active_tasks(
     else:
         generator = JsonCommandTaskBreakdownGenerator(
             config=config,
-            runner=runner,
+            runner=structured_cli_runner(config, runner),
         )
     return run_task_breakdown(root, status.current_session, generator)

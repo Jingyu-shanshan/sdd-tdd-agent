@@ -7,6 +7,7 @@ from sdd_tdd_agent.model_adapter import (
     CommandAnalyzerConfig,
     JsonCommandRequirementAnalyzer,
     ProcessRunner,
+    structured_cli_runner,
 )
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.requirement_analysis import (
@@ -18,7 +19,12 @@ from sdd_tdd_agent.requirement_analysis import (
 COMMAND_KEY = "requirement_analyzer_command"
 TIMEOUT_KEY = "requirement_analyzer_timeout_seconds"
 PROTOCOL_KEY = "requirement_analyzer_protocol"
-SUPPORTED_PROTOCOLS = {"json-command", "codex-exec"}
+SUPPORTED_PROTOCOLS = {
+    "json-command",
+    "codex-exec",
+    "claude-exec",
+    "cursor-exec",
+}
 
 
 class AnalyzerConfigurationError(ValueError):
@@ -102,6 +108,10 @@ def load_analyzer_config(root: Path) -> CommandAnalyzerConfig:
         raise AnalyzerConfigurationError(
             "Codex analyzer command must contain one executable"
         )
+    if protocol in {"claude-exec", "cursor-exec"} and len(command) != 1:
+        raise AnalyzerConfigurationError(
+            "Structured CLI analyzer command must contain one executable"
+        )
     try:
         return CommandAnalyzerConfig(tuple(command), timeout, protocol)
     except ValueError as error:
@@ -124,5 +134,8 @@ def analyze_active_requirement(
             workspace=root,
         )
     else:
-        analyzer = JsonCommandRequirementAnalyzer(config=config, runner=runner)
+        analyzer = JsonCommandRequirementAnalyzer(
+            config=config,
+            runner=structured_cli_runner(config, runner),
+        )
     return run_requirement_analysis(root, status.current_session, analyzer)

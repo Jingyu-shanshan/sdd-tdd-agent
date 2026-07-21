@@ -2,7 +2,11 @@ from pathlib import Path
 from typing import Optional
 
 from sdd_tdd_agent.analyze_command import ActiveSessionError, load_analyzer_config
-from sdd_tdd_agent.model_adapter import CodexCommandResolver, ProcessRunner
+from sdd_tdd_agent.model_adapter import (
+    CodexCommandResolver,
+    ProcessRunner,
+    structured_cli_runner,
+)
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.semantic_review import SemanticReviewRun, run_semantic_review
 from sdd_tdd_agent.semantic_review_adapter import (
@@ -29,5 +33,8 @@ def run_active_semantic_review(
             command_resolver=command_resolver,
         )
     else:
-        reviewer = JsonCommandSemanticReviewer(config, runner)
+        reviewer = JsonCommandSemanticReviewer(
+            config,
+            structured_cli_runner(config, runner),
+        )
     return run_semantic_review(root, status.current_session, reviewer)

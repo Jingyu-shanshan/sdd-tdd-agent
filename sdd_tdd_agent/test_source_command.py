@@ -8,6 +8,7 @@ from sdd_tdd_agent.model_adapter import (
     CodexCommandResolver,
     CommandAnalyzerConfig,
     ProcessRunner,
+    structured_cli_runner,
 )
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.red_execution import record_test_source_artifact
@@ -48,7 +49,8 @@ def _generate_source(
     command_resolver: Optional[CodexCommandResolver],
 ) -> GeneratedTestSource:
     if config.protocol != "codex-exec":
-        return JsonCommandTestSourceGenerator(config, runner).generate(request)
+        adapted_runner = structured_cli_runner(config, runner)
+        return JsonCommandTestSourceGenerator(config, adapted_runner).generate(request)
     with tempfile.TemporaryDirectory(prefix="sdd-tdd-test-context-") as path:
         generator = CodexExecTestSourceGenerator(
             config,

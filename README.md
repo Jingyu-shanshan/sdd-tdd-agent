@@ -490,6 +490,8 @@ Select an implemented Provider explicitly:
 
 ```bash
 uv run agent provider use codex
+uv run agent provider use claude-code
+uv run agent provider use cursor
 ```
 
 When an adapter-ready CLI is missing in an interactive terminal, `provider use`
@@ -507,10 +509,17 @@ process so this platform continues to use `shell=False`. No install is attempted
 from non-interactive selection, and authentication remains a separate manual
 step.
 
-Codex and the custom JSON adapter are implemented. Claude Code, Cursor, and
-GitHub Copilot are listed as planned and cannot be selected until their current
-CLI, structured-output, authentication, and licensing contracts have dedicated
-Adapters and contract tests. Every workflow run continues to use exactly one
+Codex, Claude Code, Cursor, and the custom JSON adapter are implemented. Claude
+Code uses its documented print-mode JSON output with plan permissions and no
+session persistence. Cursor uses print-mode JSON output without `--force`, so
+the CLI boundary does not authorize direct project writes. Both normalize their
+successful result envelope into the same strict typed JSON validators used by
+every existing workflow. Their guarded install plans use the official
+[Claude Code installer](https://code.claude.com/docs/en/installation) and
+[Cursor CLI installer](https://docs.cursor.com/en/cli/installation).
+
+GitHub Copilot remains planned until its JSONL programmatic event stream has a
+dedicated bounded contract. Every workflow run continues to use exactly one
 selected Provider.
 
 macOS and Linux Mint are target platforms. Every push and pull request now runs

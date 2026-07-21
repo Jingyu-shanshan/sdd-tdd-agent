@@ -65,9 +65,11 @@ and validate the core workflow; it is not the only planned ecosystem.
   downloading the current stable CLI from its verified official source; never
   install during non-interactive selection or without explicit confirmation.
 - Keep Codex as the first adapter-ready provider.
-- Evaluate Claude Code, Cursor, and GitHub Copilot adapters only after verifying
-  their current non-interactive CLI, structured-output, authentication, and
-  licensing contracts.
+- Claude Code and Cursor are selectable through verified non-interactive JSON
+  CLI contracts, the shared typed workflow validators, guarded official install
+  plans, and macOS/Linux Mint platform declarations.
+- Keep GitHub Copilot planned until its JSONL programmatic event stream has a
+  dedicated bounded adapter contract.
 - Keep a provider-neutral JSON command adapter for custom integrations.
 - Require every provider adapter to pass the same typed contract, failure,
   timeout, redaction, and workflow-state tests.
@@ -166,6 +168,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 ## v1.0: Model and ecosystem extensibility
 
 - Multiple selectable code-agent adapters while retaining single-agent
-  execution for each run.
+  execution for each run. Codex, Claude Code, Cursor, and custom JSON are
+  implemented; GitHub Copilot remains planned.
 - Project memory, plugin APIs, IDE integration, and additional languages and
   frameworks.

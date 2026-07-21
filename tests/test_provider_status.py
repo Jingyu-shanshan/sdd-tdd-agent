@@ -49,7 +49,7 @@ def test_should_list_providers_through_cli(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert output.getvalue().startswith("codex: adapter-ready")
-    assert "claude-code: planned" in output.getvalue()
+    assert "claude-code: adapter-ready" in output.getvalue()
 
 
 def test_should_report_selected_provider_through_cli(tmp_path: Path) -> None:

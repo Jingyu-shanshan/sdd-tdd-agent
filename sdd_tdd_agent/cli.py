@@ -58,6 +58,7 @@ from sdd_tdd_agent.model_adapter import (
     RequirementAnalyzerError,
     SubprocessRunner,
     SystemCodexCommandResolver,
+    structured_cli_runner,
 )
 from sdd_tdd_agent.platform_contract import (
     PlatformDoctor,
@@ -337,7 +338,10 @@ def main(
                     project_root,
                 )
                 if config.protocol == "codex-exec"
-                else JsonCommandAutomatedRefactorGenerator(config, process_runner)
+                else JsonCommandAutomatedRefactorGenerator(
+                    config,
+                    structured_cli_runner(config, process_runner),
+                )
             )
             run = apply_active_automated_refactor(
                 project_root,

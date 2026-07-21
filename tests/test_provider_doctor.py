@@ -69,7 +69,7 @@ def test_should_report_missing_provider_without_running_version() -> None:
     assert diagnostic.version is None
 
 
-def test_should_report_planned_provider_without_executable_lookup() -> None:
+def test_should_diagnose_ready_claude_provider() -> None:
     runner = VersionRunner(ProcessResult(0, "unexpected", ""))
     doctor = ProviderDoctor(
         runner=runner,
@@ -79,6 +79,7 @@ def test_should_report_planned_provider_without_executable_lookup() -> None:
 
     diagnostic = doctor.diagnose("claude-code")
 
-    assert runner.command is None
-    assert diagnostic.adapter_status == "planned"
-    assert diagnostic.cli_status == "not-checked"
+    assert runner.command == ("unexpected", "--version")
+    assert diagnostic.adapter_status == "adapter-ready"
+    assert diagnostic.cli_status == "installed"
+    assert diagnostic.version == "unexpected"

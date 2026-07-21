@@ -190,6 +190,13 @@ only when a failing acceptance test requires it.
   selection is explicit and persisted in tracked configuration, while each run
   still executes exactly one provider. Planned providers must not be selectable
   until their CLI and structured-output contracts are implemented and tested.
+- Adapt Claude Code and Cursor at one shared process boundary around the
+  provider-neutral JSON workflow adapters. Require one configured executable,
+  bounded duplicate-free JSON result envelopes, documented successful status,
+  and an object-valued structured result. Run Claude in print/JSON/plan/no-
+  persistence mode and Cursor in print/JSON mode without force authorization.
+  Normalize only the verified result object; retain every existing workflow's
+  strict typed response validation and human gates.
 - Treat Linux Mint as a formal target platform. Keep platform discovery behind
   injected resolvers, prefer PATH or explicit configuration, and validate
   subprocess, permission, temporary-file, signal, and toolchain behavior in a
