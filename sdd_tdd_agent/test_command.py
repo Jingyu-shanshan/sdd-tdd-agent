@@ -2,7 +2,11 @@ from pathlib import Path
 from typing import Optional
 
 from sdd_tdd_agent.analyze_command import ActiveSessionError, load_analyzer_config
-from sdd_tdd_agent.model_adapter import CodexCommandResolver, ProcessRunner
+from sdd_tdd_agent.model_adapter import (
+    CodexCommandResolver,
+    ProcessRunner,
+    structured_cli_runner,
+)
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.test_adapter import (
     CodexExecTestPlanGenerator,
@@ -29,5 +33,8 @@ def generate_active_test_plan(
             command_resolver=command_resolver,
         )
     else:
-        generator = JsonCommandTestPlanGenerator(config=config, runner=runner)
+        generator = JsonCommandTestPlanGenerator(
+            config=config,
+            runner=structured_cli_runner(config, runner),
+        )
     return run_test_generation(root, status.current_session, generator)

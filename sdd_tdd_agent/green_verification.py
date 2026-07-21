@@ -3,13 +3,16 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Dict, Tuple
+from typing import ClassVar, Dict, Optional, Tuple
 
 from sdd_tdd_agent.execution_config import (
     load_full_test_suite_timeout,
     load_test_command_timeout,
 )
-from sdd_tdd_agent.production_source_generation import production_source_path
+from sdd_tdd_agent.production_source_generation import (
+    production_source_path,
+    production_source_roots_for_case,
+)
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.red_execution import (
     RedExecutionError,
@@ -29,6 +32,7 @@ from sdd_tdd_agent.test_generation import TestCasePlan
 
 
 ARTIFACT_FIELDS = {"test_id", "file_path", "sha256"}
+ANGULAR_ARTIFACT_FIELDS = ARTIFACT_FIELDS | {"source_root"}
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 SESSION_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
@@ -46,6 +50,7 @@ class ProductionSourceArtifact:
     test_id: str
     file_path: str
     sha256: str
+    source_root: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -88,25 +93,37 @@ def _parse_state(raw: str) -> Dict[str, object]:
     return value
 
 
-def _production_artifact(value: object) -> ProductionSourceArtifact:
-    if not isinstance(value, dict) or set(value) != ARTIFACT_FIELDS:
+def _production_artifact(
+    value: object,
+    source_roots: Tuple[str, ...],
+) -> ProductionSourceArtifact:
+    if not isinstance(value, dict) or set(value) not in {
+        frozenset(ARTIFACT_FIELDS),
+        frozenset(ANGULAR_ARTIFACT_FIELDS),
+    }:
         raise GreenVerificationError("Production source record is invalid")
     test_id = value["test_id"]
     file_path = value["file_path"]
     digest = value["sha256"]
+    source_root = value.get("source_root")
+    expected_source_root = source_roots[0] if source_roots != ("src",) else None
     if (
         not isinstance(test_id, str)
         or not isinstance(file_path, str)
         or not isinstance(digest, str)
         or SHA256_PATTERN.fullmatch(digest) is None
+        or source_root != expected_source_root
     ):
         raise GreenVerificationError("Production source record is invalid")
-    return ProductionSourceArtifact(test_id, file_path, digest)
+    return ProductionSourceArtifact(test_id, file_path, digest, source_root)
 
 
 def _production_digest(root: Path, artifact: ProductionSourceArtifact) -> str:
     try:
-        relative = production_source_path(artifact.file_path)
+        source_roots = (
+            (artifact.source_root,) if artifact.source_root is not None else ("src",)
+        )
+        relative = production_source_path(artifact.file_path, source_roots)
     except ValueError as error:
         raise GreenVerificationError("Production source record is invalid") from error
     target = root.resolve()
@@ -140,7 +157,8 @@ def _load_context(
         raise GreenVerificationError(str(error)) from error
     if _read_state(state_path) != raw_state:
         raise GreenVerificationError("Session state changed concurrently")
-    artifact = _production_artifact(state.get("production_source"))
+    source_roots = production_source_roots_for_case(root, case)
+    artifact = _production_artifact(state.get("production_source"), source_roots)
     if artifact.test_id != case.test_id:
         raise GreenVerificationError("Production source record is stale")
     if _production_digest(root, artifact) != artifact.sha256:

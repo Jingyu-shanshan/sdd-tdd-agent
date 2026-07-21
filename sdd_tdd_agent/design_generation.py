@@ -1,15 +1,96 @@
 import json
 import re
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, Protocol, Tuple
+from pathlib import Path, PurePosixPath
+from typing import Dict, Optional, Protocol, Set, Tuple
+
+from sdd_tdd_agent.angular_workspace import AngularWorkspace, load_angular_workspace
+from sdd_tdd_agent.project_detection import detect_project
 
 
 PROMPT_VERSION = "v1"
+TYPESCRIPT_PROMPT_VERSION = "v2-typescript"
+ANGULAR_PROMPT_VERSION = "v3-angular"
 PROMPT_PATH = (
     Path(__file__).parent / "prompts" / "design_generation" / f"{PROMPT_VERSION}.md"
 )
+TYPESCRIPT_PROMPT_PATH = (
+    Path(__file__).parent
+    / "prompts"
+    / "design_generation"
+    / f"{TYPESCRIPT_PROMPT_VERSION}.md"
+)
+ANGULAR_PROMPT_PATH = (
+    Path(__file__).parent
+    / "prompts"
+    / "design_generation"
+    / f"{ANGULAR_PROMPT_VERSION}.md"
+)
 REQUIREMENT_HEADING = "# Requirement Analysis"
+TYPESCRIPT_CONFIG_FILES = (
+    "tsconfig.json",
+    "tsconfig.app.json",
+    "tsconfig.spec.json",
+)
+TYPESCRIPT_API_KINDS = {
+    "class",
+    "component",
+    "constant",
+    "directive",
+    "function",
+    "interface",
+    "pipe",
+    "service",
+    "type",
+}
+ANGULAR_CONSTRAINT_AREAS = {
+    "asynchronous-behavior",
+    "component-boundaries",
+    "dependency-injection",
+    "routing",
+    "state-management",
+    "templates",
+    "testing",
+}
+
+
+@dataclass(frozen=True)
+class TypeScriptProjectContext:
+    """Verified TypeScript project evidence supplied to design generation."""
+
+    package_manager: str
+    test_framework: str
+    is_angular: bool
+    config_files: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TypeScriptModuleDesign:
+    """One proposed TypeScript source module and its exported surface."""
+
+    path: str
+    responsibility: str
+    exports: Tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TypeScriptPublicApiDesign:
+    """One proposed public TypeScript API owned by a designed module."""
+
+    name: str
+    kind: str
+    signature: str
+    module: str
+
+
+@dataclass(frozen=True)
+class AngularArchitectureConstraint:
+    """One explicit and verifiable Angular architecture constraint."""
+
+    area: str
+    decision: str
+    rationale: str
+    verification: str
 
 
 @dataclass(frozen=True)
@@ -22,6 +103,8 @@ class DesignGenerationRequest:
     project_metadata: str
     architecture: str
     conventions: str
+    typescript_context: Optional[TypeScriptProjectContext] = None
+    angular_context: Optional[AngularWorkspace] = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +121,9 @@ class DesignProposal:
     testing_strategy: Tuple[str, ...]
     risks_and_tradeoffs: Tuple[str, ...]
     open_questions: Tuple[str, ...]
+    typescript_modules: Tuple[TypeScriptModuleDesign, ...] = ()
+    public_apis: Tuple[TypeScriptPublicApiDesign, ...] = ()
+    angular_constraints: Tuple[AngularArchitectureConstraint, ...] = ()
 
 
 class DesignGenerator(Protocol):
@@ -62,6 +148,26 @@ def _validate_session_id(session_id: str) -> None:
         raise ValueError(f"Invalid session identifier: {session_id}")
 
 
+def _typescript_context(root: Path) -> Optional[TypeScriptProjectContext]:
+    profile = detect_project(root)
+    if profile is None or profile.target_language != "typescript":
+        return None
+    if len(profile.test_frameworks) != 1:
+        raise ValueError("TypeScript project must have one verified test framework")
+    framework = profile.test_frameworks[0]
+    config_files = tuple(
+        name for name in TYPESCRIPT_CONFIG_FILES if (root / name).is_file()
+    )
+    if not config_files:
+        return None
+    return TypeScriptProjectContext(
+        package_manager=profile.build_tool,
+        test_framework=framework,
+        is_angular=framework == "angular",
+        config_files=config_files,
+    )
+
+
 def load_design_generation_request(
     root: Path,
     session_id: str,
@@ -75,13 +181,28 @@ def load_design_generation_request(
         raise ValueError("Approved requirement must not be empty")
     if not requirement.lstrip().startswith(REQUIREMENT_HEADING):
         raise ValueError("Design generation requires an analyzed requirement")
+    typescript_context = _typescript_context(root)
+    angular_context = None
+    if typescript_context is not None and typescript_context.is_angular:
+        angular_context = load_angular_workspace(root)
+    if angular_context is not None:
+        prompt_version = ANGULAR_PROMPT_VERSION
+        prompt_path = ANGULAR_PROMPT_PATH
+    elif typescript_context is not None:
+        prompt_version = TYPESCRIPT_PROMPT_VERSION
+        prompt_path = TYPESCRIPT_PROMPT_PATH
+    else:
+        prompt_version = PROMPT_VERSION
+        prompt_path = PROMPT_PATH
     return DesignGenerationRequest(
-        prompt_version=PROMPT_VERSION,
-        prompt=PROMPT_PATH.read_text(encoding="utf-8"),
+        prompt_version=prompt_version,
+        prompt=prompt_path.read_text(encoding="utf-8"),
         requirement=requirement,
         project_metadata=(workspace / "project.yml").read_text(encoding="utf-8"),
         architecture=(workspace / "architecture.md").read_text(encoding="utf-8"),
         conventions=(workspace / "conventions.md").read_text(encoding="utf-8"),
+        typescript_context=typescript_context,
+        angular_context=angular_context,
     )
 
 
@@ -89,6 +210,94 @@ def _render_items(items: Tuple[str, ...]) -> str:
     if not items:
         return "- None identified."
     return "\n".join(f"- {item}" for item in items)
+
+
+def _render_typescript_context(context: TypeScriptProjectContext) -> str:
+    configs = ", ".join(f"`{name}`" for name in context.config_files) or "None"
+    angular = "yes" if context.is_angular else "no"
+    return "\n".join(
+        (
+            f"- Package manager: `{context.package_manager}`",
+            f"- Test framework: `{context.test_framework}`",
+            f"- Angular: `{angular}`",
+            f"- Config files: {configs}",
+        )
+    )
+
+
+def _render_typescript_modules(modules: Tuple[TypeScriptModuleDesign, ...]) -> str:
+    sections: list[str] = []
+    for module in modules:
+        exports = ", ".join(f"`{name}`" for name in module.exports) or "None"
+        sections.append(
+            "\n".join(
+                (
+                    f"### `{module.path}`",
+                    "",
+                    f"- Responsibility: {module.responsibility}",
+                    f"- Exports: {exports}",
+                )
+            )
+        )
+    return "\n\n".join(sections)
+
+
+def _render_public_apis(apis: Tuple[TypeScriptPublicApiDesign, ...]) -> str:
+    if not apis:
+        return "- None identified."
+    sections: list[str] = []
+    for api in apis:
+        sections.append(
+            "\n".join(
+                (
+                    f"### `{api.name}`",
+                    "",
+                    f"- Kind: `{api.kind}`",
+                    f"- Signature: `{api.signature}`",
+                    f"- Module: `{api.module}`",
+                )
+            )
+        )
+    return "\n\n".join(sections)
+
+
+def _render_angular_workspace(context: AngularWorkspace) -> str:
+    sections = [f"- Workspace version: `{context.version}`"]
+    for project in context.projects:
+        prefix = f"`{project.prefix}`" if project.prefix is not None else "None"
+        root = f"`{project.root}`" if project.root else "Workspace root"
+        sections.append(
+            "\n".join(
+                (
+                    f"### `{project.name}`",
+                    "",
+                    f"- Project type: `{project.project_type}`",
+                    f"- Root: {root}",
+                    f"- Source root: `{project.source_root}`",
+                    f"- Prefix: {prefix}",
+                )
+            )
+        )
+    return "\n\n".join(sections)
+
+
+def _render_angular_constraints(
+    constraints: Tuple[AngularArchitectureConstraint, ...],
+) -> str:
+    sections: list[str] = []
+    for constraint in constraints:
+        sections.append(
+            "\n".join(
+                (
+                    f"### `{constraint.area}`",
+                    "",
+                    f"- Decision: {constraint.decision}",
+                    f"- Rationale: {constraint.rationale}",
+                    f"- Verification: {constraint.verification}",
+                )
+            )
+        )
+    return "\n\n".join(sections)
 
 
 def render_design_proposal(
@@ -116,6 +325,29 @@ def render_design_proposal(
         (f"## Risks and trade-offs\n\n{_render_items(proposal.risks_and_tradeoffs)}"),
         f"## Open questions\n\n{_render_items(proposal.open_questions)}",
     )
+    if request.typescript_context is not None:
+        sections += (
+            (
+                "## TypeScript project context\n\n"
+                f"{_render_typescript_context(request.typescript_context)}"
+            ),
+            (
+                "## TypeScript modules\n\n"
+                f"{_render_typescript_modules(proposal.typescript_modules)}"
+            ),
+            f"## Public APIs\n\n{_render_public_apis(proposal.public_apis)}",
+        )
+    if request.angular_context is not None:
+        sections += (
+            (
+                "## Angular workspace\n\n"
+                f"{_render_angular_workspace(request.angular_context)}"
+            ),
+            (
+                "## Angular architecture constraints\n\n"
+                f"{_render_angular_constraints(proposal.angular_constraints)}"
+            ),
+        )
     return "\n\n".join(sections) + "\n"
 
 
@@ -126,7 +358,109 @@ def _validate_items(name: str, items: Tuple[str, ...], required: bool) -> None:
         raise ValueError(f"Design {name} must contain non-empty strings")
 
 
-def _validate_proposal(proposal: DesignProposal) -> None:
+def _safe_typescript_path(
+    value: str,
+    source_roots: Tuple[str, ...],
+) -> None:
+    normalized = value.replace("\\", "/")
+    path = PurePosixPath(normalized)
+    is_allowed_source = any(
+        path.parts[: len(PurePosixPath(root).parts)] == PurePosixPath(root).parts
+        for root in source_roots
+    )
+    if (
+        normalized != value
+        or path.is_absolute()
+        or len(path.parts) < 2
+        or not is_allowed_source
+        or ".." in path.parts
+        or path.suffix not in {".ts", ".tsx"}
+    ):
+        if source_roots == ("src",):
+            raise ValueError("TypeScript module path must be a safe src path")
+        raise ValueError("TypeScript module path must use an Angular source root")
+
+
+def _validate_typescript_design(
+    request: DesignGenerationRequest,
+    proposal: DesignProposal,
+) -> None:
+    context = request.typescript_context
+    if context is None:
+        if proposal.typescript_modules or proposal.public_apis:
+            raise ValueError("Non-TypeScript design contains TypeScript records")
+        return
+    if not proposal.typescript_modules:
+        raise ValueError("TypeScript modules must not be empty")
+    source_roots = ("src",)
+    if request.angular_context is not None:
+        source_roots = tuple(
+            project.source_root for project in request.angular_context.projects
+        )
+    module_paths: Set[str] = set()
+    for module in proposal.typescript_modules:
+        if not isinstance(module, TypeScriptModuleDesign):
+            raise ValueError("TypeScript modules have invalid type")
+        _safe_typescript_path(module.path, source_roots)
+        if module.path in module_paths:
+            raise ValueError("TypeScript module paths must be unique")
+        module_paths.add(module.path)
+        if (
+            not module.responsibility.strip()
+            or not module.exports
+            or any(
+                not isinstance(name, str) or not name.strip() for name in module.exports
+            )
+        ):
+            raise ValueError("TypeScript module fields must not be blank")
+    api_identities: Set[Tuple[str, str]] = set()
+    for api in proposal.public_apis:
+        if not isinstance(api, TypeScriptPublicApiDesign):
+            raise ValueError("TypeScript public APIs have invalid type")
+        if api.module not in module_paths:
+            raise ValueError("TypeScript public API must reference a proposed module")
+        if api.kind not in TYPESCRIPT_API_KINDS:
+            raise ValueError("TypeScript public API kind is unsupported")
+        if not api.name.strip() or not api.signature.strip():
+            raise ValueError("TypeScript public API fields must not be blank")
+        identity = (api.module, api.name)
+        if identity in api_identities:
+            raise ValueError("TypeScript public API identities must be unique")
+        api_identities.add(identity)
+
+
+def _validate_angular_design(
+    request: DesignGenerationRequest,
+    proposal: DesignProposal,
+) -> None:
+    if request.angular_context is None:
+        if proposal.angular_constraints:
+            raise ValueError("Non-Angular design contains Angular records")
+        return
+    if not proposal.angular_constraints:
+        raise ValueError("Angular architecture constraints must not be empty")
+    areas: Set[str] = set()
+    for constraint in proposal.angular_constraints:
+        if not isinstance(constraint, AngularArchitectureConstraint):
+            raise ValueError("Angular architecture constraints have invalid type")
+        if constraint.area not in ANGULAR_CONSTRAINT_AREAS:
+            raise ValueError("Angular architecture constraint area is unsupported")
+        if constraint.area in areas:
+            raise ValueError("Angular architecture constraint areas must be unique")
+        areas.add(constraint.area)
+        fields = (
+            constraint.decision,
+            constraint.rationale,
+            constraint.verification,
+        )
+        if any(not isinstance(value, str) or not value.strip() for value in fields):
+            raise ValueError("Angular architecture constraint fields must not be blank")
+
+
+def _validate_proposal(
+    request: DesignGenerationRequest,
+    proposal: DesignProposal,
+) -> None:
     if not isinstance(proposal.overview, str) or not proposal.overview.strip():
         raise ValueError("Design overview must not be empty")
     _validate_items("architecture decisions", proposal.architecture_decisions, True)
@@ -142,6 +476,8 @@ def _validate_proposal(proposal: DesignProposal) -> None:
     _validate_items("testing strategy", proposal.testing_strategy, True)
     _validate_items("risks and trade-offs", proposal.risks_and_tradeoffs, False)
     _validate_items("open questions", proposal.open_questions, False)
+    _validate_typescript_design(request, proposal)
+    _validate_angular_design(request, proposal)
 
 
 def _load_design_state(state_path: Path, session_id: str) -> Dict[str, object]:
@@ -179,7 +515,7 @@ def run_design_generation(
     proposal = generator.generate(request)
     if not isinstance(proposal, DesignProposal):
         raise ValueError("Generator must return DesignProposal")
-    _validate_proposal(proposal)
+    _validate_proposal(request, proposal)
 
     next_state = "DESIGN_REVIEW"
     state["state"] = next_state

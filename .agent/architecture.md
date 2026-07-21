@@ -31,6 +31,10 @@ only when a failing acceptance test requires it.
   CLI dispatch. Validate session identifiers before resolving state paths.
 - Create feature sessions exclusively with immutable typed results, pending SDD
   templates, safe generated IDs, and atomic active-session metadata updates.
+- Create bug Sessions through the same internal Session-creation service and
+  standard eight-artifact contract while exposing a distinct typed result and
+  `agent bug` entry point. Downstream workflows remain kind-neutral and retain
+  the recorded `feature` or `bug` kind.
 - Isolate requirement-analysis models behind an injected typed Protocol. Load
   versioned Prompts from packaged files, validate all structured output before
   mutation, and require human review before DESIGN.
@@ -39,13 +43,27 @@ only when a failing acceptance test requires it.
   the decision in state, and atomically transition to DESIGN or back to
   ANALYSIS.
 - Isolate design generation behind its own injected typed Protocol and
-  versioned Prompt. Require both DESIGN state and the stored human requirement
-  approval, validate structured design output before mutation, and stop at
-  DESIGN_REVIEW rather than silently entering task breakdown.
+  versioned Prompt. Select dedicated TypeScript or Angular Prompts only from
+  verified project detection with a supported root `tsconfig` marker, carry
+  immutable package-manager/framework/config evidence, and keep projects
+  without that evidence plus generic and Java requests on v1. For Angular,
+  strictly load `angular.json` workspace version and application/library
+  boundaries before generation. Require both DESIGN state and the stored human
+  requirement approval, validate structured design output before mutation, and
+  stop at DESIGN_REVIEW rather than silently entering task breakdown.
 - Implement design model integration in a separate adapter module. Reuse the
-  existing tokenized process/configuration/resolver contracts, enforce the exact
-  ten-field JSON Schema, and apply the same ephemeral read-only Codex exchange
-  without mixing Session mutation into provider code.
+  existing tokenized process/configuration/resolver contracts, enforce the ten
+  required generic JSON fields plus optional strict TypeScript module/public-API
+  and Angular architecture-constraint records, and apply the same ephemeral
+  read-only Codex exchange without mixing Session mutation into provider code.
+  TypeScript workflows require normalized source modules, non-empty exports,
+  closed API kinds, unique identities, and valid module references. Angular
+  modules must stay under a configured project source root, and constraint
+  areas, content, and uniqueness are validated before artifact mutation.
+- Parse Angular workspace metadata in a separate read-only module with strict
+  JSON duplicate-key handling. Accept only configured application/library
+  records with normalized project and source-root boundaries; do not resolve or
+  infer builders, configurations, or runtime conventions.
 - Compose `agent design` through a dedicated active-Session service that reuses
   the selected Provider protocol, command, and timeout, chooses the matching
   design adapter, and delegates all state/artifact validation to the design
@@ -74,7 +92,12 @@ only when a failing acceptance test requires it.
   Require all three human approvals, cover every approved task, enforce the
   happy/boundary/exception/integration/regression order and only preceding-test
   dependencies, validate relative target paths before mutation, and enter
-  IMPLEMENTATION without writing or running test code.
+  IMPLEMENTATION without writing or running test code. For verified Angular
+  projects, select a dedicated Prompt, carry strict workspace boundaries, and
+  require every case to identify its configured project, supported subject,
+  testing facilities, template contracts, dependency-injection behavior, and
+  asynchronous behavior. Constrain Angular cases to exact `.spec.ts` paths
+  below their project source root.
 - Implement test-plan model integration in a separate adapter module. Decode
   exact nested case objects through provider-neutral JSON or the existing
   ephemeral read-only Codex exchange, reuse injected process/resolver contracts,
@@ -83,6 +106,8 @@ only when a failing acceptance test requires it.
   the configured test-plan adapter and delegates approvals, semantics, and
   artifact/state mutation to the core workflow.
 - Parse only deterministic generated test plans when entering implementation.
+  Accept either the exact legacy section set or the exact Angular extension,
+  reconstruct typed Angular metadata, and re-run contextual plan validation.
   Track an ordered completed-test prefix and one current cycle in Session state;
   keep the developer context restricted to the current test, production source,
   and compiler/test output.
@@ -133,8 +158,10 @@ only when a failing acceptance test requires it.
 - Bind REVIEW to a canonical implementation-completion snapshot. `agent review`
   validates that snapshot against retained TDD evidence and artifact records,
   writes a deterministic source/output-free audit report, records its digest,
-  and enters REFACTOR without external execution. State clearly that semantic
-  automated code review remains a later milestone.
+  and enters REFACTOR without external execution. An optional typed semantic
+  review command can then evaluate the exact completion snapshot through the
+  isolated JSON/Codex boundary, persist a deterministic source-free report,
+  and require explicit approval before automated refactoring.
 - Complete v0.1 REFACTOR without claiming automated source improvement.
   `agent refactor` validates the complete report/completion/GREEN/source digest
   chain around each process, reruns the exact current test followed by the
@@ -165,10 +192,20 @@ only when a failing acceptance test requires it.
   selection is explicit and persisted in tracked configuration, while each run
   still executes exactly one provider. Planned providers must not be selectable
   until their CLI and structured-output contracts are implemented and tested.
+- Adapt Claude Code and Cursor at one shared process boundary around the
+  provider-neutral JSON workflow adapters. Require one configured executable,
+  bounded duplicate-free JSON result envelopes, documented successful status,
+  and an object-valued structured result. Run Claude in print/JSON/plan/no-
+  persistence mode and Cursor in print/JSON mode without force authorization.
+  Normalize only the verified result object; retain every existing workflow's
+  strict typed response validation and human gates.
 - Treat Linux Mint as a formal target platform. Keep platform discovery behind
   injected resolvers, prefer PATH or explicit configuration, and validate
   subprocess, permission, temporary-file, signal, and toolchain behavior in a
   Linux CI matrix.
+- Keep real multi-toolchain acceptance fixtures isolated under test data. Their
+  Maven, Gradle, npm, pnpm, and Yarn metadata must be accepted by the same
+  production detectors and their CI commands must match production plans.
 - Model host detection as an injected read-only Platform Environment. On Linux,
   parse only standard `os-release` identifiers, reject malformed/duplicate
   fields, and classify `ID=linuxmint` as the formal target while reporting other
@@ -179,5 +216,81 @@ only when a failing acceptance test requires it.
   verified official plan and explicit interactive confirmation. Download and
   execution are separate tokenized `shell=False` processes; successful install
   must be followed by executable and version verification before selection.
+- Resolve Blind production write permissions from the typed current test. Keep
+  generic workflows at `src/**`; for Angular, map the current case's project to
+  its strictly parsed configured `sourceRoot` and expose only that normalized
+  boundary through a dedicated versioned Prompt. Apply the same root to source
+  collection, result validation, optimistic atomic writes, GREEN digest checks,
+  and final REFACTOR audit. Persist a `source_root` only for non-default Angular
+  artifacts so legacy three-field records and provider payloads remain exact.
+- Add semantic implementation review as an explicit REVIEW substage before the
+  deterministic integrity transition. Revalidate completion and final source
+  digests, then expose only the final test/production snapshots and completion
+  identity through a versioned Prompt and strict injected JSON/Codex reviewer.
+  Validate closed review areas/severities, exact visible paths and line numbers,
+  decision consistency, bounded text, source-copy rejection, and duplicates
+  before atomically recording a source-free report. Keep required changes in
+  REVIEW; only an approved digest-bound semantic record may be preserved by
+  `agent review` while entering REFACTOR. Retain the invariant-only legacy path.
+- Add one-file behavior-preserving refactoring only after the approved semantic
+  path. Reuse the final audit-chain loader, test commands, evidence sanitizer,
+  Provider configuration, and process runners. Expose only the approved
+  source-free report, completion/review digests, and exact production source
+  through a versioned Prompt and strict JSON/Codex Schema. Require a changed
+  same-path result, atomically bind before/after digests, reuse both final test
+  gates, and restore source/state on failure. Keep invariant-only Sessions on
+  the existing no-source-change path.
+- Observe workflow model/test calls by decorating the two existing injected
+  runner interfaces at CLI composition. Append only bounded allowlisted events
+  under `.agent/metrics`: operation, kind, sanitized tool, outcome, duration,
+  and Prompt version/digest. Never persist request/output/argument content.
+  Keep token/cost fields typed but unavailable until a verified Provider
+  contract supplies them; never estimate billing. Strictly aggregate active-
+  Session call counts, rates, duration, and complete reported usage through
+  `agent metrics`.
+- Project exact task/test quality from the existing validated plan parser,
+  trusted completed-test prefix, and telemetry rather than adding counters to
+  workflow state. Report task/test completion, test/refactor success, mean call
+  duration, and only complete verified cost through `agent metrics quality`.
+  For failed events, atomically merge a bounded content-free fingerprint under
+  `.agent/memories/failures.json`; retain only operation/kind/sanitized tool,
+  failure mode/exit code, occurrences, and Session IDs. Expose it through
+  `agent failures` without model interpretation or private error content.
+- Gate Git-bound changes behind a pure typed risk assessment and one strict
+  active-Session approval record. Canonicalize validated relative path/kind
+  records into a SHA-256 digest, classify documentation/test evidence as low,
+  production changes as medium, and deletions or control/dependency files as
+  high. Record low risk as not requiring approval and require an explicit
+  source-free CLI approve/reject decision for medium/high risk. Reject forged
+  assessments, malformed records, symlinks, temporary-file collisions, stale
+  Sessions, and changed digests. Git execution remains a separate boundary and
+  must revalidate this digest before mutation.
+- Integrate Git as an optional injected shell-free boundary at the verified
+  GREEN phase. Derive the candidate solely from the validated current test and
+  production artifact paths/digests, parse scoped NUL-delimited porcelain
+  status, and create the approval request without index mutation. On commit,
+  require the matching approved/not-required digest, run exact pathspec `add`,
+  verify cached names, revalidate status and artifacts, then use `commit --only`
+  for those same paths and verify HEAD. Never stage the project root or include
+  unrelated staged changes. Archive only the source-free approval record by
+  digest after success; do not expose or persist Git process output.
+- Treat the existing tracked `project.yml`, `architecture.md`, and
+  `conventions.md` as the sole cross-Session project-memory snapshot. Load them
+  through one typed standard-library boundary that rejects unsafe, empty,
+  invalid, oversized, or changing files and calculates a canonical digest.
+  Requirement analysis consumes this snapshot; the CLI renders only its
+  identity and byte sizes, never its content. Do not duplicate it in a database
+  or model-managed store.
+- Publish plugin and IDE integration as one immutable versioned JSON manifest.
+  Reuse the explicit external-process `json-command` protocol for plugins and
+  derive Provider capabilities from the Registry. Expose only stable read-only
+  CLI commands and exit codes to IDE clients. Discovery runs without a project,
+  provider, network, environment mutation, dynamic Python loading, or daemon;
+  editor-specific extensions remain separate consumers of this contract.
+- Publish only verified target ecosystems through an immutable typed Registry:
+  Java/Maven/Gradle/JUnit 5 and TypeScript/npm/pnpm/Yarn/Jest/Vitest/Angular.
+  Keep discovery read-only and separate from authoritative project detection.
+  Do not list a future language or framework before its detection, isolated
+  test/full-suite commands, incremental TDD behavior, and real fixture exist.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

@@ -14,3 +14,9 @@ build/
 .agent/metrics/
 .agent/**/*.tmp
 *.agent.tmp
+*.agent-refactor*.tmp
+node_modules/
+.pnp.*
+**/.yarn/install-state.gz
+**/.yarn/build-state.yml
+**/.yarn/unplugged/

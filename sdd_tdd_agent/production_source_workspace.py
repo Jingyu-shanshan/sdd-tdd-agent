@@ -33,8 +33,12 @@ class ProductionSourceWorkspaceError(RuntimeError):
 class ProductionSourceCollector(Protocol):
     """Typed boundary for collecting only visible production source."""
 
-    def collect(self, root: Path) -> Tuple[SourceSnapshot, ...]:
-        """Collect deterministic production snapshots below src/."""
+    def collect(
+        self,
+        root: Path,
+        source_roots: Tuple[str, ...] = ("src",),
+    ) -> Tuple[SourceSnapshot, ...]:
+        """Collect deterministic snapshots below exact writable roots."""
         ...
 
 
@@ -81,24 +85,42 @@ def _read_snapshot(root: Path, path: Path) -> SourceSnapshot:
 class WorkspaceProductionSourceCollector:
     """Collect bounded production source while excluding all test-like paths."""
 
-    def collect(self, root: Path) -> Tuple[SourceSnapshot, ...]:
-        """Collect safe deterministic source snapshots below src/."""
+    def collect(
+        self,
+        root: Path,
+        source_roots: Tuple[str, ...] = ("src",),
+    ) -> Tuple[SourceSnapshot, ...]:
+        """Collect safe deterministic source snapshots below allowed roots."""
         project = root.resolve()
-        source_root = project / "src"
-        if not source_root.is_dir() or source_root.is_symlink():
-            return ()
         candidates: Dict[str, Path] = {}
-        for path in source_root.rglob("*"):
-            if not path.is_file() or path.is_symlink():
+        for source_root_value in source_roots:
+            relative_root = production_source_path(
+                f"{source_root_value}/placeholder.ts",
+                source_roots,
+            ).parent
+            source_root = project
+            unsafe_root = False
+            for part in relative_root.parts:
+                source_root = source_root / part
+                if source_root.is_symlink():
+                    unsafe_root = True
+                    break
+            if unsafe_root or not source_root.is_dir():
                 continue
-            relative = path.relative_to(project).as_posix()
-            if any(part in EXCLUDED_DIRECTORY_NAMES for part in path.parts):
-                continue
-            try:
-                normalized = production_source_path(relative).as_posix()
-            except ValueError:
-                continue
-            candidates[normalized] = path
+            for path in source_root.rglob("*"):
+                if not path.is_file() or path.is_symlink():
+                    continue
+                relative = path.relative_to(project).as_posix()
+                if any(part in EXCLUDED_DIRECTORY_NAMES for part in path.parts):
+                    continue
+                try:
+                    normalized = production_source_path(
+                        relative,
+                        source_roots,
+                    ).as_posix()
+                except ValueError:
+                    continue
+                candidates[normalized] = path
         if len(candidates) > MAX_PRODUCTION_SOURCE_FILES:
             raise ProductionSourceWorkspaceError(
                 "Production source context contains too many files"
@@ -114,9 +136,13 @@ class WorkspaceProductionSourceCollector:
         return snapshots
 
 
-def _destination(root: Path, file_path: str) -> Path:
+def _destination(
+    root: Path,
+    file_path: str,
+    source_roots: Tuple[str, ...],
+) -> Path:
     project = root.resolve()
-    relative = production_source_path(file_path)
+    relative = production_source_path(file_path, source_roots)
     current = project
     for part in relative.parts:
         current = current / part
@@ -173,7 +199,11 @@ class AtomicProductionSourceWriter:
     ) -> ProductionSourceWriteResult:
         """Write one complete source after optimistic concurrency checks."""
         validate_generated_production_source(request, generated)
-        destination = _destination(root, generated.file_path)
+        destination = _destination(
+            root,
+            generated.file_path,
+            request.production_source_roots,
+        )
         expected = _expected_target(request, generated.file_path)
         replaced_existing = _check_target(destination, expected)
         try:
@@ -182,7 +212,11 @@ class AtomicProductionSourceWriter:
             raise ProductionSourceWorkspaceError(
                 "Production source destination could not be prepared"
             ) from error
-        destination = _destination(root, generated.file_path)
+        destination = _destination(
+            root,
+            generated.file_path,
+            request.production_source_roots,
+        )
         temporary = destination.with_name(f".{destination.name}.agent.tmp")
         try:
             with temporary.open("x", encoding="utf-8") as stream:

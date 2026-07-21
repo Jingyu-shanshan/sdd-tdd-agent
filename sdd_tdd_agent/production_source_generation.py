@@ -1,7 +1,9 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import ClassVar, Dict, Protocol, Set, Tuple
+from typing import ClassVar, Dict, Optional, Protocol, Set, Tuple
+
+from sdd_tdd_agent.angular_workspace import load_angular_workspace
 
 from sdd_tdd_agent.red_execution import (
     MAX_EVIDENCE_STREAM_CHARACTERS,
@@ -14,15 +16,12 @@ from sdd_tdd_agent.tdd_cycle import (
     SourceSnapshot,
     load_current_test_case,
 )
+from sdd_tdd_agent.test_generation import TestCasePlan
 
 
 PROMPT_VERSION = "v1"
-PROMPT_PATH = (
-    Path(__file__).parent
-    / "prompts"
-    / "production_source_generation"
-    / f"{PROMPT_VERSION}.md"
-)
+ANGULAR_PROMPT_VERSION = "v2-angular"
+PROMPT_DIRECTORY = Path(__file__).parent / "prompts" / "production_source_generation"
 MAX_PRODUCTION_SOURCE_BYTES = 1_000_000
 MAX_PRODUCTION_CONTEXT_BYTES = 2_000_000
 PRODUCTION_SOURCE_SUFFIXES = {
@@ -57,6 +56,7 @@ class ProductionSourceGenerationRequest:
     prompt_version: str
     prompt: str
     context: BlindDevelopmentContext
+    production_source_roots: Tuple[str, ...] = ("src",)
 
 
 @dataclass(frozen=True)
@@ -81,7 +81,29 @@ class ProductionSourceGenerator(Protocol):
         ...
 
 
-def production_source_path(value: object) -> PurePosixPath:
+def _production_source_roots(values: object) -> Tuple[PurePosixPath, ...]:
+    if not isinstance(values, tuple) or not values:
+        raise ValueError("Production source roots are invalid")
+    roots = tuple(PurePosixPath(value) for value in values if isinstance(value, str))
+    if len(roots) != len(values) or any(
+        not root.parts
+        or root.is_absolute()
+        or ".." in root.parts
+        or "\\" in value
+        or value != root.as_posix()
+        or any(part.startswith(".") for part in root.parts)
+        for value, root in zip(values, roots)
+    ):
+        raise ValueError("Production source roots are invalid")
+    if len(set(roots)) != len(roots):
+        raise ValueError("Production source roots are invalid")
+    return roots
+
+
+def production_source_path(
+    value: object,
+    source_roots: Tuple[str, ...] = ("src",),
+) -> PurePosixPath:
     """Validate and normalize one writable production-source path."""
     if not isinstance(value, str) or not value.strip() or "\0" in value:
         raise ValueError("Generated production source path is invalid")
@@ -92,7 +114,6 @@ def production_source_path(value: object) -> PurePosixPath:
     if (
         path.is_absolute()
         or len(path.parts) < 2
-        or path.parts[0] != "src"
         or ".." in path.parts
         or any(part.startswith(".") for part in path.parts)
         or any(part in TEST_DIRECTORY_NAMES for part in folded_parts)
@@ -105,7 +126,38 @@ def production_source_path(value: object) -> PurePosixPath:
         )
     ):
         raise ValueError("Generated production source path is invalid")
+    roots = _production_source_roots(source_roots)
+    if not any(
+        len(path.parts) > len(root.parts)
+        and path.parts[: len(root.parts)] == root.parts
+        for root in roots
+    ):
+        raise ValueError("Generated production source path is invalid")
     return path
+
+
+def load_production_source_roots(
+    root: Path,
+    session_id: str,
+    expected_phase: str,
+) -> Tuple[str, ...]:
+    """Resolve the exact writable root for the current typed test case."""
+    current = load_current_test_case(root, session_id, expected_phase)
+    return production_source_roots_for_case(root, current)
+
+
+def production_source_roots_for_case(
+    root: Path,
+    current: TestCasePlan,
+) -> Tuple[str, ...]:
+    """Resolve an exact production root from one validated test case."""
+    if current.angular is None:
+        return ("src",)
+    workspace = load_angular_workspace(root)
+    for project in workspace.projects:
+        if project.name == current.angular.project:
+            return (project.source_root,)
+    raise ValueError("Current Angular test project is not configured")
 
 
 def _load_state(root: Path, session_id: str) -> Dict[str, object]:
@@ -179,6 +231,7 @@ def _test_source(root: Path, session_id: str, file_path: str) -> SourceSnapshot:
 
 def _validate_production_sources(
     sources: Tuple[SourceSnapshot, ...],
+    source_roots: Tuple[str, ...],
 ) -> Tuple[SourceSnapshot, ...]:
     if not isinstance(sources, tuple):
         raise ValueError("Production source snapshots must be a tuple")
@@ -187,7 +240,7 @@ def _validate_production_sources(
     for snapshot in sources:
         if not isinstance(snapshot, SourceSnapshot):
             raise ValueError("Production source snapshots are invalid")
-        path = production_source_path(snapshot.path).as_posix()
+        path = production_source_path(snapshot.path, source_roots).as_posix()
         if path in paths or not snapshot.content.strip() or "\0" in snapshot.content:
             raise ValueError("Production source snapshots are invalid")
         size = len(snapshot.content.encode("utf-8"))
@@ -204,9 +257,16 @@ def load_production_source_generation_request(
     root: Path,
     session_id: str,
     production_sources: Tuple[SourceSnapshot, ...],
+    production_source_roots: Optional[Tuple[str, ...]] = None,
 ) -> ProductionSourceGenerationRequest:
     """Load one isolated Blind request from a trustworthy RED cycle."""
     current = load_current_test_case(root, session_id, "RED")
+    resolved_roots = load_production_source_roots(root, session_id, "RED")
+    if (
+        production_source_roots is not None
+        and production_source_roots != resolved_roots
+    ):
+        raise ValueError("Production source roots do not match current test")
     current_source = _test_source(root, session_id, current.test_file)
     compile_output, test_output = _load_red_outputs(
         root,
@@ -217,15 +277,23 @@ def load_production_source_generation_request(
     validate_current_test_source_artifact(root, session_id, "RED")
     context = BlindDevelopmentContext(
         current_test=current,
-        production_sources=_validate_production_sources(production_sources),
+        production_sources=_validate_production_sources(
+            production_sources,
+            resolved_roots,
+        ),
         compile_output=compile_output,
         test_output=test_output,
         current_test_source=current_source,
     )
+    prompt_version = (
+        ANGULAR_PROMPT_VERSION if current.angular is not None else PROMPT_VERSION
+    )
+    prompt_path = PROMPT_DIRECTORY / f"{prompt_version}.md"
     return ProductionSourceGenerationRequest(
-        PROMPT_VERSION,
-        PROMPT_PATH.read_text(encoding="utf-8"),
+        prompt_version,
+        prompt_path.read_text(encoding="utf-8"),
         context,
+        resolved_roots,
     )
 
 
@@ -240,7 +308,10 @@ def validate_generated_production_source(
         raise ValueError("Production source result is invalid")
     if generated.test_id != request.context.current_test.test_id:
         raise ValueError("Generated production source test identifier is invalid")
-    normalized = production_source_path(generated.file_path).as_posix()
+    normalized = production_source_path(
+        generated.file_path,
+        request.production_source_roots,
+    ).as_posix()
     if generated.file_path != normalized:
         raise ValueError("Generated production source path must be normalized")
     if not isinstance(generated.content, str) or not generated.content.strip():

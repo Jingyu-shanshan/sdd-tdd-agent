@@ -1,0 +1,13 @@
+{
+  "name": "pnpm-toolchain-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.2.0",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.10"
+  }
+}

@@ -78,7 +78,7 @@ def test_should_fail_safely_without_process_content(
     assert "SECRET" not in str(captured.value)
 
 
-@pytest.mark.parametrize("provider_key", ["claude-code", "custom-json"])
+@pytest.mark.parametrize("provider_key", ["copilot", "custom-json"])
 def test_should_reject_provider_without_installable_adapter(
     provider_key: str,
 ) -> None:

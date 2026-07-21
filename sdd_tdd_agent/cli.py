@@ -2,10 +2,24 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
+from sdd_tdd_agent.change_approval import (
+    ChangeApprovalError,
+    approve_active_change,
+    load_active_change_approval,
+    reject_active_change,
+    render_change_approval,
+)
 from sdd_tdd_agent.analyze_command import (
     analyze_active_requirement,
     load_analyzer_config,
 )
+from sdd_tdd_agent.automated_refactor import (
+    AutomatedRefactorError,
+    CodexExecAutomatedRefactorGenerator,
+    JsonCommandAutomatedRefactorGenerator,
+    apply_active_automated_refactor,
+)
+from sdd_tdd_agent.bug_session import create_bug_session
 from sdd_tdd_agent.design_command import generate_active_design
 from sdd_tdd_agent.design_review import (
     DesignReviewError,
@@ -13,7 +27,13 @@ from sdd_tdd_agent.design_review import (
     load_active_design_review,
     reject_active_design,
 )
+from sdd_tdd_agent.ecosystem_registry import list_ecosystems, render_ecosystems
 from sdd_tdd_agent.feature_session import create_feature_session
+from sdd_tdd_agent.failure_memory import (
+    FailureMemoryError,
+    load_failure_memories,
+    render_failure_memories,
+)
 from sdd_tdd_agent.cycle_completion import (
     CycleCompletionError,
     ImplementationCompletionRun,
@@ -22,16 +42,28 @@ from sdd_tdd_agent.green_verification import (
     GreenVerificationError,
     GreenVerificationRun,
 )
+from sdd_tdd_agent.git_integration import (
+    GitCommandRunner,
+    GitIntegrationError,
+    SystemGitCommandRunner,
+    commit_active_green_cycle,
+    prepare_active_green_commit,
+)
 from sdd_tdd_agent.implementation_command import continue_active_implementation
 from sdd_tdd_agent.implementation_review import (
     ImplementationReviewError,
     run_active_implementation_review,
+)
+from sdd_tdd_agent.integration_api import (
+    build_integration_manifest,
+    render_integration_manifest,
 )
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
     SubprocessRunner,
     SystemCodexCommandResolver,
+    structured_cli_runner,
 )
 from sdd_tdd_agent.platform_contract import (
     PlatformDoctor,
@@ -41,14 +73,33 @@ from sdd_tdd_agent.platform_contract import (
 from sdd_tdd_agent.production_source_command import ProductionSourceCommandRun
 from sdd_tdd_agent.production_source_workspace import ProductionSourceWorkspaceError
 from sdd_tdd_agent.project_init import initialize_project
+from sdd_tdd_agent.project_memory import (
+    ProjectMemoryError,
+    load_project_memory,
+    render_project_memory,
+)
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
+from sdd_tdd_agent.quality_metrics import (
+    QualityMetricsError,
+    load_session_quality_metrics,
+    render_session_quality_metrics,
+)
 from sdd_tdd_agent.requirement_review import (
     RequirementReviewError,
     approve_active_requirement,
     load_active_requirement_review,
     reject_active_requirement,
 )
+from sdd_tdd_agent.semantic_review import SemanticReviewError
+from sdd_tdd_agent.semantic_review_command import run_active_semantic_review
 from sdd_tdd_agent.task_command import generate_active_tasks
+from sdd_tdd_agent.telemetry import (
+    TelemetryError,
+    load_session_metrics,
+    observe_process_runner,
+    observe_test_runner,
+    render_session_metrics,
+)
 from sdd_tdd_agent.task_review import (
     TaskReviewError,
     approve_active_tasks,
@@ -95,6 +146,7 @@ def main(
     err: Optional[TextIO] = None,
     provider_dependencies: Optional[ProviderCommandDependencies] = None,
     test_runner: Optional[TestCommandRunner] = None,
+    git_runner: Optional[GitCommandRunner] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -104,6 +156,15 @@ def main(
 
     if arguments and arguments[0] == "hello":
         hello(output)
+        return 0
+
+    if arguments == ["integration", "manifest"]:
+        manifest = build_integration_manifest()
+        output.write(render_integration_manifest(manifest))
+        return 0
+
+    if arguments == ["ecosystem", "list"]:
+        output.write(render_ecosystems(list_ecosystems()))
         return 0
 
     if arguments and arguments[0] == "init":
@@ -116,10 +177,143 @@ def main(
         output.write(render_project_status(status))
         return 0
 
+    if arguments == ["memory"]:
+        try:
+            memory = load_project_memory(project_root)
+        except ProjectMemoryError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_project_memory(memory))
+        return 0
+
+    if arguments == ["metrics"]:
+        try:
+            status = load_project_status(project_root)
+            if status.current_session is None:
+                raise TelemetryError("Project has no active Session")
+            metrics = load_session_metrics(project_root, status.current_session)
+        except (OSError, UnicodeError, ValueError, TelemetryError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_session_metrics(metrics))
+        return 0
+
+    if arguments == ["metrics", "quality"]:
+        try:
+            status = load_project_status(project_root)
+            if status.current_session is None:
+                raise QualityMetricsError("Project has no active Session")
+            metrics = load_session_quality_metrics(
+                project_root,
+                status.current_session,
+            )
+        except (OSError, UnicodeError, ValueError, QualityMetricsError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_session_quality_metrics(metrics))
+        return 0
+
+    if arguments == ["failures"]:
+        try:
+            memories = load_failure_memories(project_root)
+        except FailureMemoryError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_failure_memories(memories))
+        return 0
+
+    if arguments == ["approval", "status"]:
+        try:
+            approval = load_active_change_approval(project_root)
+        except ChangeApprovalError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_change_approval(approval))
+        return 0
+
+    if arguments == ["approval", "approve"]:
+        try:
+            approval = approve_active_change(project_root)
+        except ChangeApprovalError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Change approved: {approval.session_id} ({approval.risk_level})\n"
+        )
+        return 0
+
+    if arguments == ["git", "prepare"]:
+        try:
+            plan = prepare_active_green_commit(
+                project_root,
+                git_runner or SystemGitCommandRunner(),
+            )
+        except GitIntegrationError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            "Git commit approval "
+            f"{plan.approval_decision}: {plan.session_id} "
+            f"({plan.test_id}; {plan.risk_level}; {plan.change_digest})\n"
+        )
+        return 0
+
+    if arguments == ["git", "commit"]:
+        try:
+            committed = commit_active_green_cycle(
+                project_root,
+                git_runner or SystemGitCommandRunner(),
+            )
+        except GitIntegrationError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Git commit complete: {committed.session_id} "
+            f"({committed.test_id}; {committed.commit_sha})\n"
+        )
+        return 0
+
+    if arguments[0:2] == ["approval", "reject"]:
+        try:
+            approval = reject_active_change(
+                project_root,
+                " ".join(arguments[2:]),
+            )
+        except ChangeApprovalError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Change rejected: {approval.session_id} ({approval.risk_level})\n"
+        )
+        return 0
+
     if arguments and arguments[0] == "feature":
         description = " ".join(arguments[1:])
         session = create_feature_session(project_root, description)
         output.write(f"Created feature session: {session.session_id}\n")
+        return 0
+
+    if arguments and arguments[0] == "bug":
+        description = " ".join(arguments[1:])
+        session = create_bug_session(project_root, description)
+        output.write(f"Created bug session: {session.session_id}\n")
+        return 0
+
+    if arguments == ["review", "semantic"]:
+        process_runner = observe_process_runner(
+            project_root,
+            "semantic_review",
+            runner if runner is not None else SubprocessRunner(),
+        )
+        try:
+            run = run_active_semantic_review(project_root, process_runner)
+        except (ValueError, SemanticReviewError, TelemetryError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Semantic review ready: {run.session_id} "
+            f"({run.decision}; {run.finding_count} findings; REVIEW)\n"
+        )
         return 0
 
     if arguments == ["review"]:
@@ -136,10 +330,14 @@ def main(
         return 0
 
     if arguments == ["refactor"]:
-        command_runner = test_runner or SystemTestCommandRunner()
+        command_runner = observe_test_runner(
+            project_root,
+            "refactor_verification",
+            test_runner or SystemTestCommandRunner(),
+        )
         try:
             run = complete_active_refactor(project_root, command_runner)
-        except (RefactorVerificationError, RedExecutionError) as error:
+        except (RefactorVerificationError, RedExecutionError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -148,11 +346,59 @@ def main(
         )
         return 0
 
+    if arguments == ["refactor", "automated"]:
+        process_runner = observe_process_runner(
+            project_root,
+            "automated_refactor",
+            runner if runner is not None else SubprocessRunner(),
+        )
+        command_runner = observe_test_runner(
+            project_root,
+            "automated_refactor_verification",
+            test_runner or SystemTestCommandRunner(),
+        )
+        try:
+            config = load_analyzer_config(project_root)
+            generator = (
+                CodexExecAutomatedRefactorGenerator(
+                    config,
+                    process_runner,
+                    project_root,
+                )
+                if config.protocol == "codex-exec"
+                else JsonCommandAutomatedRefactorGenerator(
+                    config,
+                    structured_cli_runner(config, process_runner),
+                )
+            )
+            run = apply_active_automated_refactor(
+                project_root,
+                generator,
+                command_runner,
+            )
+        except (
+            ValueError,
+            RequirementAnalyzerError,
+            AutomatedRefactorError,
+            TelemetryError,
+        ) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Automated refactor complete: {run.session_id} "
+            f"({run.file_path}; tests verified; DONE)\n"
+        )
+        return 0
+
     if arguments and arguments[0] == "analyze":
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "requirement_analysis",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = analyze_active_requirement(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -162,20 +408,28 @@ def main(
         return 0
 
     if arguments == ["design"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "design_generation",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = generate_active_design(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Design ready for review: {run.session_id} ({run.next_state})\n")
         return 0
 
     if arguments == ["tasks"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "task_breakdown",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = generate_active_tasks(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(f"Tasks ready for review: {run.session_id} ({run.next_state})\n")
@@ -232,10 +486,14 @@ def main(
         return 0
 
     if arguments == ["tests"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "test_generation",
+            runner if runner is not None else SubprocessRunner(),
+        )
         try:
             run = generate_active_test_plan(project_root, process_runner)
-        except (ValueError, RequirementAnalyzerError) as error:
+        except (ValueError, RequirementAnalyzerError, TelemetryError) as error:
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(
@@ -244,8 +502,16 @@ def main(
         return 0
 
     if arguments == ["continue"]:
-        process_runner = runner if runner is not None else SubprocessRunner()
-        command_runner = test_runner or SystemTestCommandRunner()
+        process_runner = observe_process_runner(
+            project_root,
+            "implementation_generation",
+            runner if runner is not None else SubprocessRunner(),
+        )
+        command_runner = observe_test_runner(
+            project_root,
+            "tdd_test_execution",
+            test_runner or SystemTestCommandRunner(),
+        )
         try:
             run = continue_active_implementation(
                 project_root,
@@ -260,6 +526,7 @@ def main(
             CycleCompletionError,
             ProductionSourceWorkspaceError,
             TestSourceWorkspaceError,
+            TelemetryError,
         ) as error:
             error_output.write(f"Error: {error}\n")
             return 2

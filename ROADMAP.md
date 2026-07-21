@@ -8,7 +8,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Project initialization and status.
 - Maven and Gradle project detection.
 - JUnit 5 detection and incremental test execution.
-- Feature and bug sessions.
+- Feature and bug Sessions with shared safe creation, activation, and downstream
+  workflow compatibility.
 - Explicit human requirement review with approve/reject transitions.
 - Typed design generation with JSON/Codex adapters that stops for human design
   review.
@@ -64,9 +65,11 @@ and validate the core workflow; it is not the only planned ecosystem.
   downloading the current stable CLI from its verified official source; never
   install during non-interactive selection or without explicit confirmation.
 - Keep Codex as the first adapter-ready provider.
-- Evaluate Claude Code, Cursor, and GitHub Copilot adapters only after verifying
-  their current non-interactive CLI, structured-output, authentication, and
-  licensing contracts.
+- Claude Code and Cursor are selectable through verified non-interactive JSON
+  CLI contracts, the shared typed workflow validators, guarded official install
+  plans, and macOS/Linux Mint platform declarations.
+- Keep GitHub Copilot planned until its JSONL programmatic event stream has a
+  dedicated bounded adapter contract.
 - Keep a provider-neutral JSON command adapter for custom integrations.
 - Require every provider adapter to pass the same typed contract, failure,
   timeout, redaction, and workflow-state tests.
@@ -81,9 +84,17 @@ and validate the core workflow; it is not the only planned ecosystem.
   changing the host environment.
 - Resolve provider executables from PATH or explicit configuration without
   silently installing tools or changing environment variables.
-- Test Python 3.9, 3.10, and 3.12; Bash and Zsh; executable permissions;
-  temporary paths; signals; timeouts; and child-process cleanup.
-- Add CI coverage for Maven/Gradle and npm/pnpm/yarn workflows on Linux.
+- Run the quality suite automatically on explicit Ubuntu 24.04 workers with
+  Python 3.9, 3.10, and 3.12, plus Bash and Zsh test entry points.
+- Provide a manual, label-constrained workflow for a real Linux Mint
+  self-hosted runner. The target remains pending real-host validation until
+  that workflow records a successful run.
+- Keep executable-permission, temporary-path, signal, timeout, and child-process
+  contracts in the Linux-hosted suite and expand them with real-host failures as
+  evidence becomes available.
+- Run existing Maven/Gradle and npm/pnpm/yarn planning contracts on Linux and
+  execute locked minimal JUnit/Vitest fixture projects through all five real
+  toolchains on Ubuntu CI.
 - Keep platform-specific executable fallbacks isolated behind typed resolvers.
 
 ## v0.2: TypeScript and Angular
@@ -92,11 +103,13 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 - Root package-manager and Jest/Vitest test-command detection plus generic
   digest-bound RED execution and Blind minimal production-source orchestration
-  are implemented.
-- Detect TypeScript projects from project metadata and configuration files.
-- Detect npm, pnpm, and yarn without assuming a package manager.
-- Detect and invoke the project's configured Jest or Vitest commands.
-- Generate typed SDD artifacts for TypeScript modules and public APIs.
+  are implemented. Design generation now carries verified TypeScript project
+  context with a supported root `tsconfig` marker into a dedicated versioned
+  Prompt and produces validated module and public-API SDD sections.
+- TypeScript project, npm/pnpm/yarn, and Jest/Vitest detection are implemented
+  from explicit project metadata and configuration evidence.
+- Typed SDD artifacts for safe TypeScript modules and public APIs are
+  implemented without changing generic or Java design contracts.
 - Apply the same incremental TDD loop used by Java: one failing test, minimal
   implementation, passing suite, refactor, repeat.
 
@@ -104,26 +117,66 @@ and validate the core workflow; it is not the only planned ecosystem.
 
 - Root Angular workspace detection, exact non-watch file/name command planning,
   generic RED execution, and Blind `src/**` production generation are
-  implemented; Angular-specific context conventions and broader testing
-  coverage continue in this milestone.
-- Detect Angular workspaces and applications from their project metadata.
-- Capture Angular architecture constraints in SDD design documents.
-- Support incremental tests for components, services, directives, pipes,
-  routing, forms, and HTTP integrations.
-- Use the test runner and Angular testing facilities already configured by the
-  target project instead of silently migrating its toolchain.
-- Keep component templates, dependency injection, and asynchronous behavior
-  visible in test plans and acceptance criteria.
+  implemented. Design generation now strictly carries configured application/
+  library boundaries into a dedicated Angular Prompt and requires typed,
+  verifiable architecture constraints.
+- Angular workspaces, applications, and libraries are detected from explicit
+  package and `angular.json` metadata.
+- Typed Angular architecture constraints and project-source-root boundaries are
+  captured in deterministic SDD design documents.
+- Typed incremental test plans now support component, service, directive, pipe,
+  routing, form, and HTTP subjects with exact `.spec.ts` project-source-root
+  boundaries and lossless one-current-test TDD parsing.
+- Angular plans retain the configured runner and explicitly name the testing
+  facilities they require instead of silently migrating the toolchain.
+- Component templates, dependency injection, and asynchronous behavior are
+  explicit typed fields in test plans and rendered acceptance evidence.
+- Blind production collection, generation, atomic writes, GREEN verification,
+  and final audit now use the current Angular test's exact verified project
+  `sourceRoot`, including monorepo application/library roots, while preserving
+  the legacy `src/**` boundary for other workflows.
 
 ## v0.3: Review, refactor, and observability
 
-- Automated review and behavior-preserving refactoring stages.
-- Quality metrics, test-loop metrics, cost, duration, and failure memory.
-- Human approval gates and Git integration.
+- Typed automated semantic review now covers Clean Code, SOLID, duplication,
+  complexity, readability, bugs, performance, and security through isolated
+  JSON/Codex adapters, exact source locations, deterministic reports, and an
+  approved handoff to the existing integrity gate.
+- One-file behavior-preserving refactoring now uses the approved semantic
+  report, isolated JSON/Codex adapters, exact same-path replacement,
+  digest-bound optimistic writes, the retained current/full-suite gates, and
+  automatic source/state rollback on failed verification. The legacy
+  no-source-change finalizer remains compatible.
+- Privacy-safe append-only model/test telemetry now records Prompt identity,
+  tool kind, outcomes, duration, and honest typed token/cost availability.
+  `agent metrics` strictly aggregates active-Session call counts, success rate,
+  duration, and verified usage without storing request, source, command, or
+  output content.
+- Exact task/test completion, build/test and refactor success, mean duration,
+  and verified cost-per-feature projection now reuse validated plans, state,
+  and telemetry. Bounded atomic cross-Session failure memory merges only
+  content-free fingerprints and occurrence/Session counts; `agent metrics
+  quality` and `agent failures` expose both views.
+- Risk-bound human approval now canonicalizes exact path/kind changes, records
+  low-risk exemption, and requires explicit digest-bound approval/rejection for
+  medium/high-risk Git commits without storing source or diff content.
+- Optional per-GREEN-cycle Git integration now prepares a scoped risk request,
+  revalidates artifact/change digests, stages and commits only the exact current
+  test/production paths, preserves unrelated staged changes, verifies HEAD, and
+  archives source-free approval evidence. It never runs `git add .` or pushes.
 
 ## v1.0: Model and ecosystem extensibility
 
 - Multiple selectable code-agent adapters while retaining single-agent
-  execution for each run.
-- Project memory, plugin APIs, IDE integration, and additional languages and
-  frameworks.
+  execution for each run. Codex, Claude Code, Cursor, and custom JSON are
+  implemented; GitHub Copilot remains planned.
+- Bounded project memory reuses tracked metadata, architecture, and conventions
+  as one validated digest-bound snapshot shared across Sessions and requirement
+  analysis, with a content-free read-only CLI status.
+- A versioned Registry-derived integration manifest now publishes the existing
+  external JSON Provider plugin API and stable read-only CLI/exit-code contract
+  for IDE clients without dynamic code loading or editor dependencies.
+- The original documented ecosystem scope is complete and discoverable through
+  a typed Registry: Java with Maven/Gradle/JUnit 5, and TypeScript with npm/
+  pnpm/Yarn plus Jest/Vitest/Angular. Future languages/frameworks require their
+  own detection, command, TDD, and real-fixture evidence before being listed.

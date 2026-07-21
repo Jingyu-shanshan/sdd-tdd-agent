@@ -13,7 +13,11 @@ from sdd_tdd_agent.design_generation import (
     DesignGenerationRun,
     run_design_generation,
 )
-from sdd_tdd_agent.model_adapter import CodexCommandResolver, ProcessRunner
+from sdd_tdd_agent.model_adapter import (
+    CodexCommandResolver,
+    ProcessRunner,
+    structured_cli_runner,
+)
 from sdd_tdd_agent.project_status import load_project_status
 
 
@@ -35,5 +39,8 @@ def generate_active_design(
             command_resolver=command_resolver,
         )
     else:
-        generator = JsonCommandDesignGenerator(config=config, runner=runner)
+        generator = JsonCommandDesignGenerator(
+            config=config,
+            runner=structured_cli_runner(config, runner),
+        )
     return run_design_generation(root, status.current_session, generator)

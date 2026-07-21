@@ -3,14 +3,17 @@ import json
 import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import ClassVar, Dict, Tuple
+from typing import ClassVar, Dict, Optional, Tuple
 
 from sdd_tdd_agent.cycle_completion import canonical_json_sha256
 from sdd_tdd_agent.execution_config import (
     load_full_test_suite_timeout,
     load_test_command_timeout,
 )
-from sdd_tdd_agent.production_source_generation import production_source_path
+from sdd_tdd_agent.production_source_generation import (
+    production_source_path,
+    production_source_roots_for_case,
+)
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.red_execution import (
     MAX_EVIDENCE_STREAM_CHARACTERS,
@@ -18,6 +21,7 @@ from sdd_tdd_agent.red_execution import (
     TestCommandRunner,
     sanitize_test_evidence,
 )
+from sdd_tdd_agent.tdd_cycle import load_planned_test_case
 
 
 COMPLETION_FIELDS = {
@@ -31,6 +35,14 @@ REVIEW_FIELDS = {"decision", "completion_sha256", "report_sha256"}
 GREEN_FIELDS = {"test_id", "current_test", "full_suite"}
 PROCESS_FIELDS = {"command", "returncode", "stdout", "stderr"}
 ARTIFACT_FIELDS = {"test_id", "file_path", "sha256"}
+ANGULAR_ARTIFACT_FIELDS = ARTIFACT_FIELDS | {"source_root"}
+AUTOMATED_REFACTOR_FIELDS = {
+    "file_path",
+    "before_sha256",
+    "after_sha256",
+    "completion_sha256",
+    "review_sha256",
+}
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
 
@@ -40,7 +52,7 @@ class RefactorVerificationError(RuntimeError):
 
 @dataclass(frozen=True)
 class RefactorCompletionRun:
-    """Result of final no-source-change verification and DONE transition."""
+    """Result of final refactor verification and DONE transition."""
 
     __test__: ClassVar[bool] = False
 
@@ -53,6 +65,14 @@ class _Artifact:
     test_id: str
     file_path: str
     sha256: str
+    source_root: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class _RefactorChange:
+    file_path: str
+    before_sha256: str
+    after_sha256: str
 
 
 @dataclass(frozen=True)
@@ -64,6 +84,7 @@ class _RefactorContext:
     completed_tests: Tuple[str, ...]
     current_command: Tuple[str, ...]
     suite_command: Tuple[str, ...]
+    change: Optional[_RefactorChange]
 
 
 def _read_text(path: Path, label: str) -> str:
@@ -89,20 +110,32 @@ def _digest(value: object, label: str) -> str:
     return value
 
 
-def _artifact(value: object, final_test: str, label: str) -> _Artifact:
-    if not isinstance(value, dict) or set(value) != ARTIFACT_FIELDS:
+def _artifact(
+    value: object,
+    final_test: str,
+    label: str,
+    expected_source_root: Optional[str] = None,
+) -> _Artifact:
+    allowed_fields = (
+        {frozenset(ARTIFACT_FIELDS), frozenset(ANGULAR_ARTIFACT_FIELDS)}
+        if label == "Final production"
+        else {frozenset(ARTIFACT_FIELDS)}
+    )
+    if not isinstance(value, dict) or set(value) not in allowed_fields:
         raise RefactorVerificationError(f"{label} artifact is invalid")
     test_id = value["test_id"]
     file_path = value["file_path"]
     digest = value["sha256"]
+    source_root = value.get("source_root")
     if (
         test_id != final_test
         or not isinstance(file_path, str)
         or not isinstance(digest, str)
         or SHA256_PATTERN.fullmatch(digest) is None
+        or source_root != expected_source_root
     ):
         raise RefactorVerificationError(f"{label} artifact is stale")
-    return _Artifact(final_test, file_path, digest)
+    return _Artifact(final_test, file_path, digest, source_root)
 
 
 def _test_path(value: str) -> PurePosixPath:
@@ -140,26 +173,68 @@ def _validate_artifacts(
     state: Dict[str, object],
     final_test: str,
     completion: Dict[str, object],
-) -> None:
+    review: Optional[Dict[str, object]] = None,
+) -> Optional[_RefactorChange]:
     test = _artifact(state.get("test_source"), final_test, "Final test")
+    try:
+        session_id = state["session_id"]
+        if not isinstance(session_id, str):
+            raise ValueError("Session identifier is invalid")
+        case = load_planned_test_case(root, session_id, final_test)
+        source_roots = production_source_roots_for_case(root, case)
+    except (OSError, UnicodeError, KeyError, ValueError) as error:
+        raise RefactorVerificationError(
+            "Final production artifact path is unsafe"
+        ) from error
+    expected_root = source_roots[0] if source_roots != ("src",) else None
     production = _artifact(
         state.get("production_source"),
         final_test,
         "Final production",
+        expected_root,
     )
     try:
-        production_path = production_source_path(production.file_path)
+        production_path = production_source_path(
+            production.file_path,
+            source_roots,
+        )
     except ValueError as error:
         raise RefactorVerificationError(
             "Final production artifact path is unsafe"
         ) from error
+    current_production_sha = _file_digest(
+        root,
+        production_path,
+        "Final production",
+    )
     if (
         _file_digest(root, _test_path(test.file_path), "Final test") != test.sha256
-        or _file_digest(root, production_path, "Final production") != production.sha256
         or completion["test_source_sha256"] != test.sha256
         or completion["production_source_sha256"] != production.sha256
     ):
         raise RefactorVerificationError("Final source artifact changed")
+    change = state.get("automated_refactor")
+    if current_production_sha == production.sha256:
+        if change is not None:
+            raise RefactorVerificationError("Automated refactor record is stale")
+        return None
+    if (
+        not isinstance(change, dict)
+        or set(change) != AUTOMATED_REFACTOR_FIELDS
+        or review is None
+        or review.get("decision") != "semantic_review_passed"
+        or change.get("file_path") != production.file_path
+        or change.get("before_sha256") != production.sha256
+        or change.get("after_sha256") != current_production_sha
+        or change.get("completion_sha256") != canonical_json_sha256(completion)
+        or change.get("review_sha256") != review.get("report_sha256")
+    ):
+        raise RefactorVerificationError("Final source artifact changed")
+    return _RefactorChange(
+        production.file_path,
+        production.sha256,
+        current_production_sha,
+    )
 
 
 def _command_evidence(
@@ -197,7 +272,12 @@ def _validate_audit_chain(
     root: Path,
     session: Path,
     state: Dict[str, object],
-) -> Tuple[Tuple[str, ...], Tuple[str, ...], Tuple[str, ...]]:
+) -> Tuple[
+    Tuple[str, ...],
+    Tuple[str, ...],
+    Tuple[str, ...],
+    Optional[_RefactorChange],
+]:
     completion = state.get("implementation_completion")
     review = state.get("implementation_review")
     evidence = state.get("green_evidence")
@@ -226,7 +306,7 @@ def _validate_audit_chain(
         raise RefactorVerificationError("Implementation completion is stale")
     completion_sha = canonical_json_sha256(completion)
     if (
-        review["decision"] != "invariant_review_passed"
+        review["decision"] not in {"invariant_review_passed", "semantic_review_passed"}
         or review["completion_sha256"] != completion_sha
     ):
         raise RefactorVerificationError("Implementation review is stale")
@@ -237,11 +317,12 @@ def _validate_audit_chain(
     report = _read_text(report_path, "Review report")
     if hashlib.sha256(report.encode("utf-8")).hexdigest() != report_sha:
         raise RefactorVerificationError("Review report changed")
-    _validate_artifacts(root, state, final_test, completion)
+    change = _validate_artifacts(root, state, final_test, completion, review)
     return (
         tuple(completed_value),
         _command_evidence(root, evidence["current_test"], "Current test"),
         _command_evidence(root, evidence["full_suite"], "Full suite"),
+        change,
     )
 
 
@@ -254,7 +335,7 @@ def _load_context(root: Path, session_id: str) -> _RefactorContext:
         raise RefactorVerificationError("Session state identifier is invalid")
     if state.get("state") != "REFACTOR":
         raise RefactorVerificationError("Final verification requires REFACTOR state")
-    completed, current, suite = _validate_audit_chain(root, session, state)
+    completed, current, suite, change = _validate_audit_chain(root, session, state)
     if _read_text(state_path, "Session state") != raw_state:
         raise RefactorVerificationError("Session state changed concurrently")
     return _RefactorContext(
@@ -265,6 +346,7 @@ def _load_context(root: Path, session_id: str) -> _RefactorContext:
         completed,
         current,
         suite,
+        change,
     )
 
 
@@ -295,10 +377,19 @@ def _write_done(
     suite_result: TestCommandProcessResult,
 ) -> None:
     context.state["state"] = "DONE"
-    context.state["refactor"] = {
-        "mode": "no_source_change",
-        "decision": "verified",
-    }
+    if context.change is None:
+        context.state["refactor"] = {
+            "mode": "no_source_change",
+            "decision": "verified",
+        }
+    else:
+        context.state["refactor"] = {
+            "mode": "automated_source_change",
+            "decision": "verified",
+            "file_path": context.change.file_path,
+            "before_sha256": context.change.before_sha256,
+            "after_sha256": context.change.after_sha256,
+        }
     context.state["final_verification"] = {
         "current_test": _result_evidence(
             root,
@@ -334,7 +425,7 @@ def complete_active_refactor(
     root: Path,
     runner: TestCommandRunner,
 ) -> RefactorCompletionRun:
-    """Run final no-source-change verification and atomically enter DONE."""
+    """Run final refactor verification and atomically enter DONE."""
     try:
         status = load_project_status(root)
     except (OSError, UnicodeError, ValueError) as error:

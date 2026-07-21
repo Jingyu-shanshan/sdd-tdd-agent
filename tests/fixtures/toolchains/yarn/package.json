@@ -1,0 +1,13 @@
+{
+  "name": "yarn-toolchain-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "yarn@4.6.0",
+  "scripts": {
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "4.1.10"
+  }
+}

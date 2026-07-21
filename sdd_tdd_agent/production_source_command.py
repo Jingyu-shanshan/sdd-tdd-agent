@@ -9,6 +9,7 @@ from sdd_tdd_agent.model_adapter import (
     CodexCommandResolver,
     CommandAnalyzerConfig,
     ProcessRunner,
+    structured_cli_runner,
 )
 from sdd_tdd_agent.production_source_adapter import (
     CodexExecProductionSourceGenerator,
@@ -19,6 +20,7 @@ from sdd_tdd_agent.production_source_generation import (
     ProductionSourceGenerator,
     ProductionSourceGenerationRequest,
     load_production_source_generation_request,
+    load_production_source_roots,
     production_source_path,
     validate_generated_production_source,
 )
@@ -61,7 +63,10 @@ def _generator(
             root,
             command_resolver=command_resolver,
         )
-    return JsonCommandProductionSourceGenerator(config, runner)
+    return JsonCommandProductionSourceGenerator(
+        config,
+        structured_cli_runner(config, runner),
+    )
 
 
 def _state(root: Path, session_id: str) -> tuple[Path, str, Dict[str, object]]:
@@ -120,7 +125,10 @@ def _record_production_source(
     validate_generated_production_source(request, generated)
     if case.test_id != generated.test_id:
         raise RedExecutionError("Production source does not match current test")
-    relative = production_source_path(generated.file_path)
+    relative = production_source_path(
+        generated.file_path,
+        request.production_source_roots,
+    )
     target = root.resolve().joinpath(*relative.parts)
     try:
         content = target.read_bytes()
@@ -134,11 +142,14 @@ def _record_production_source(
     if not isinstance(progress, dict) or progress.get("phase") != "RED":
         raise RedExecutionError("Current TDD cycle must be in RED phase")
     progress["phase"] = "IMPLEMENT"
-    state["production_source"] = {
+    production_record = {
         "test_id": generated.test_id,
         "file_path": generated.file_path,
         "sha256": hashlib.sha256(content).hexdigest(),
     }
+    if request.production_source_roots != ("src",):
+        production_record["source_root"] = request.production_source_roots[0]
+    state["production_source"] = production_record
     state.pop("green_evidence", None)
     if _read_state_text(state_path) != raw_state:
         raise RedExecutionError("Session state changed concurrently")
@@ -163,9 +174,15 @@ def generate_active_production_source(
     cycle = initial_state.get("current_cycle")
     if isinstance(cycle, bool) or not isinstance(cycle, int) or cycle <= 0:
         raise RedExecutionError("Session cycle number is invalid")
+    source_roots = load_production_source_roots(root, session_id, "RED")
     source_collector = collector or WorkspaceProductionSourceCollector()
-    sources = source_collector.collect(root)
-    request = load_production_source_generation_request(root, session_id, sources)
+    sources = source_collector.collect(root, source_roots)
+    request = load_production_source_generation_request(
+        root,
+        session_id,
+        sources,
+        source_roots,
+    )
     generated = _generator(root, config, runner, command_resolver).generate(request)
     validate_current_test_source_artifact(root, session_id, "RED")
     if _state(root, session_id)[1] != initial_raw:

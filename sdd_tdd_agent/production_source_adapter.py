@@ -60,7 +60,7 @@ def _request_payload(
     current_source = context.current_test_source
     if current_source is None:
         raise ProductionSourceGeneratorError("Current test source is missing")
-    return {
+    payload = {
         "prompt_version": request.prompt_version,
         "prompt": request.prompt,
         "current_test": _case_payload(context.current_test),
@@ -75,6 +75,9 @@ def _request_payload(
         "compile_output": context.compile_output,
         "test_output": context.test_output,
     }
+    if request.prompt_version != "v1":
+        payload["production_source_roots"] = list(request.production_source_roots)
+    return payload
 
 
 def _decode_source(
