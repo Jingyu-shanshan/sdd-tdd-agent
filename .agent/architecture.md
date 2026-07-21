@@ -272,5 +272,12 @@ only when a failing acceptance test requires it.
   for those same paths and verify HEAD. Never stage the project root or include
   unrelated staged changes. Archive only the source-free approval record by
   digest after success; do not expose or persist Git process output.
+- Treat the existing tracked `project.yml`, `architecture.md`, and
+  `conventions.md` as the sole cross-Session project-memory snapshot. Load them
+  through one typed standard-library boundary that rejects unsafe, empty,
+  invalid, oversized, or changing files and calculates a canonical digest.
+  Requirement analysis consumes this snapshot; the CLI renders only its
+  identity and byte sizes, never its content. Do not duplicate it in a database
+  or model-managed store.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

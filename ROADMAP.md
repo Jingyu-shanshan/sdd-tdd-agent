@@ -170,5 +170,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Multiple selectable code-agent adapters while retaining single-agent
   execution for each run. Codex, Claude Code, Cursor, and custom JSON are
   implemented; GitHub Copilot remains planned.
-- Project memory, plugin APIs, IDE integration, and additional languages and
-  frameworks.
+- Bounded project memory reuses tracked metadata, architecture, and conventions
+  as one validated digest-bound snapshot shared across Sessions and requirement
+  analysis, with a content-free read-only CLI status.
+- Plugin APIs, IDE integration, and additional languages and frameworks.

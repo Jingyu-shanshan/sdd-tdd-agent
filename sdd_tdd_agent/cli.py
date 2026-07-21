@@ -68,6 +68,11 @@ from sdd_tdd_agent.platform_contract import (
 from sdd_tdd_agent.production_source_command import ProductionSourceCommandRun
 from sdd_tdd_agent.production_source_workspace import ProductionSourceWorkspaceError
 from sdd_tdd_agent.project_init import initialize_project
+from sdd_tdd_agent.project_memory import (
+    ProjectMemoryError,
+    load_project_memory,
+    render_project_memory,
+)
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
 from sdd_tdd_agent.quality_metrics import (
     QualityMetricsError,
@@ -156,6 +161,15 @@ def main(
     if arguments and arguments[0] == "status":
         status = load_project_status(project_root)
         output.write(render_project_status(status))
+        return 0
+
+    if arguments == ["memory"]:
+        try:
+            memory = load_project_memory(project_root)
+        except ProjectMemoryError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_project_memory(memory))
         return 0
 
     if arguments == ["metrics"]:

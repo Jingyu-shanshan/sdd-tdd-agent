@@ -37,6 +37,18 @@ detected from strict `package.json` metadata plus an explicit `packageManager`
 or one consistent lockfile; configured Jest, Vitest, and Angular test scripts
 are reported without guessing a package manager or framework.
 
+The tracked `project.yml`, `architecture.md`, and `conventions.md` files are the
+canonical cross-Session project memory. Inspect its validated snapshot identity
+without printing its content:
+
+```bash
+uv run agent memory
+```
+
+The loader rejects missing, empty, unsafe, invalid UTF-8, concurrently changed,
+or over-1-MB combined memory. Requirement analysis consumes this same coherent
+typed snapshot; no database, embedding store, or second mutable copy is used.
+
 Inspect project classification and the active development session with:
 
 ```bash

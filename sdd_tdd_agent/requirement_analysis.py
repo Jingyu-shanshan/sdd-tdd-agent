@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Protocol, Tuple
 
+from sdd_tdd_agent.project_memory import load_project_memory
+
 
 PROMPT_VERSION = "v1"
 PROMPT_PATH = (
@@ -76,13 +78,14 @@ def load_analysis_request(root: Path, session_id: str) -> RequirementAnalysisReq
     workspace = root / ".agent"
     session = workspace / "sessions" / session_id
     requirement = (session / "requirement.md").read_text(encoding="utf-8")
+    memory = load_project_memory(root)
     return RequirementAnalysisRequest(
         prompt_version=PROMPT_VERSION,
         prompt=PROMPT_PATH.read_text(encoding="utf-8"),
         user_request=_extract_user_request(requirement),
-        project_metadata=(workspace / "project.yml").read_text(encoding="utf-8"),
-        architecture=(workspace / "architecture.md").read_text(encoding="utf-8"),
-        conventions=(workspace / "conventions.md").read_text(encoding="utf-8"),
+        project_metadata=memory.project_metadata,
+        architecture=memory.architecture,
+        conventions=memory.conventions,
     )
 
 
