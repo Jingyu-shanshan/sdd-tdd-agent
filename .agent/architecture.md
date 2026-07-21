@@ -158,8 +158,10 @@ only when a failing acceptance test requires it.
 - Bind REVIEW to a canonical implementation-completion snapshot. `agent review`
   validates that snapshot against retained TDD evidence and artifact records,
   writes a deterministic source/output-free audit report, records its digest,
-  and enters REFACTOR without external execution. State clearly that semantic
-  automated code review remains a later milestone.
+  and enters REFACTOR without external execution. An optional typed semantic
+  review command can then evaluate the exact completion snapshot through the
+  isolated JSON/Codex boundary, persist a deterministic source-free report,
+  and require explicit approval before automated refactoring.
 - Complete v0.1 REFACTOR without claiming automated source improvement.
   `agent refactor` validates the complete report/completion/GREEN/source digest
   chain around each process, reruns the exact current test followed by the

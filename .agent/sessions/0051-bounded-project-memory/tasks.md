@@ -17,4 +17,4 @@
 
 - [x] Run all local gates, build, Session/security/ignore audits.
 - [x] Update README, architecture, roadmap, and SDD evidence.
-- [ ] Commit, push, and require hosted CI success.
+- [x] Commit, push, and require hosted CI success.

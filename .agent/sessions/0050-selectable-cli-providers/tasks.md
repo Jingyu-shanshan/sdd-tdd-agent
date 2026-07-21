@@ -20,4 +20,4 @@
 
 - [x] Run focused/full gates, build, security, Session, and ignore audits.
 - [x] Update architecture, roadmap, README, and acceptance evidence.
-- [ ] Commit, push, and require hosted CI success.
+- [x] Commit, push, and require hosted CI success.
