@@ -223,5 +223,13 @@ only when a failing acceptance test requires it.
   before atomically recording a source-free report. Keep required changes in
   REVIEW; only an approved digest-bound semantic record may be preserved by
   `agent review` while entering REFACTOR. Retain the invariant-only legacy path.
+- Add one-file behavior-preserving refactoring only after the approved semantic
+  path. Reuse the final audit-chain loader, test commands, evidence sanitizer,
+  Provider configuration, and process runners. Expose only the approved
+  source-free report, completion/review digests, and exact production source
+  through a versioned Prompt and strict JSON/Codex Schema. Require a changed
+  same-path result, atomically bind before/after digests, reuse both final test
+  gates, and restore source/state on failure. Keep invariant-only Sessions on
+  the existing no-source-change path.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

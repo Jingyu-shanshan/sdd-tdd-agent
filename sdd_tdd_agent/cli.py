@@ -6,6 +6,12 @@ from sdd_tdd_agent.analyze_command import (
     analyze_active_requirement,
     load_analyzer_config,
 )
+from sdd_tdd_agent.automated_refactor import (
+    AutomatedRefactorError,
+    CodexExecAutomatedRefactorGenerator,
+    JsonCommandAutomatedRefactorGenerator,
+    apply_active_automated_refactor,
+)
 from sdd_tdd_agent.bug_session import create_bug_session
 from sdd_tdd_agent.design_command import generate_active_design
 from sdd_tdd_agent.design_review import (
@@ -167,6 +173,34 @@ def main(
         output.write(
             f"Refactor verification complete: {run.session_id} "
             f"({run.completed_test_count} tests; DONE)\n"
+        )
+        return 0
+
+    if arguments == ["refactor", "automated"]:
+        process_runner = runner if runner is not None else SubprocessRunner()
+        command_runner = test_runner or SystemTestCommandRunner()
+        try:
+            config = load_analyzer_config(project_root)
+            generator = (
+                CodexExecAutomatedRefactorGenerator(
+                    config,
+                    process_runner,
+                    project_root,
+                )
+                if config.protocol == "codex-exec"
+                else JsonCommandAutomatedRefactorGenerator(config, process_runner)
+            )
+            run = apply_active_automated_refactor(
+                project_root,
+                generator,
+                command_runner,
+            )
+        except (ValueError, RequirementAnalyzerError, AutomatedRefactorError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Automated refactor complete: {run.session_id} "
+            f"({run.file_path}; tests verified; DONE)\n"
         )
         return 0
 

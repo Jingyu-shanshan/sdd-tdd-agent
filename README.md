@@ -356,20 +356,28 @@ explicitly states that semantic findings were not computed. With an approved
 semantic record, it preserves that report and records `semantic_review_passed`
 before entering REFACTOR.
 
-Finish the v0.1 workflow with deterministic refactor verification:
+Finish with either automated source refactoring or the compatible no-source
+verification path:
 
 ```bash
+uv run agent refactor automated
 uv run agent refactor
 ```
 
-This command implements the honest v0.1 refactor contract: it makes no source
-change and invokes no model. It revalidates the complete review, completion,
-GREEN-evidence, and final-source digest chain, reruns the recorded current test
-and then the recorded unfiltered suite with separate timeouts, and requires two
-zero exits. It stores only sanitized bounded final evidence and atomically
-enters DONE. Any failed process, changed source or state, stale record, unsafe
-path, or concurrent update preserves REFACTOR. Automated behavior-preserving
-source refactoring remains planned for v0.3.
+`agent refactor automated` requires the approved semantic-review path. Through
+the selected JSON/Codex Provider it exposes only the versioned Prompt, approved
+source-free report, completion/review digests, and exact final production file.
+The result must be a changed same-path complete source. It is written with a
+digest-bound optimistic record, then the existing current-test and full-suite
+gates run. Both must pass before DONE; either failure restores the captured
+source and REFACTOR state. Codex uses a project-external ephemeral read-only
+exchange, and provider errors never include source or review payloads.
+
+Plain `agent refactor` retains the v0.1 no-source-change behavior and invokes no
+model. Both paths revalidate the complete review, completion, GREEN-evidence,
+and final-source audit chain around the two test processes, store only sanitized
+bounded final evidence, and enter DONE atomically. Unbound source changes,
+failed processes, stale state, unsafe paths, or concurrent updates fail safely.
 
 For Angular monorepos, GREEN, completion, review, and final REFACTOR
 verification retain and revalidate the exact recorded source-root boundary as

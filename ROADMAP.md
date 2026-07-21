@@ -139,8 +139,12 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Typed automated semantic review now covers Clean Code, SOLID, duplication,
   complexity, readability, bugs, performance, and security through isolated
   JSON/Codex adapters, exact source locations, deterministic reports, and an
-  approved handoff to the existing integrity gate. Behavior-preserving source
-  refactoring remains the next stage.
+  approved handoff to the existing integrity gate.
+- One-file behavior-preserving refactoring now uses the approved semantic
+  report, isolated JSON/Codex adapters, exact same-path replacement,
+  digest-bound optimistic writes, the retained current/full-suite gates, and
+  automatic source/state rollback on failed verification. The legacy
+  no-source-change finalizer remains compatible.
 - Quality metrics, test-loop metrics, cost, duration, and failure memory.
 - Human approval gates and Git integration.
 
