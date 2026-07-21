@@ -158,7 +158,10 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Risk-bound human approval now canonicalizes exact path/kind changes, records
   low-risk exemption, and requires explicit digest-bound approval/rejection for
   medium/high-risk Git commits without storing source or diff content.
-- Git index and per-cycle commit integration.
+- Optional per-GREEN-cycle Git integration now prepares a scoped risk request,
+  revalidates artifact/change digests, stages and commits only the exact current
+  test/production paths, preserves unrelated staged changes, verifies HEAD, and
+  archives source-free approval evidence. It never runs `git add .` or pushes.
 
 ## v1.0: Model and ecosystem extensibility
 

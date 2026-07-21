@@ -41,6 +41,13 @@ from sdd_tdd_agent.green_verification import (
     GreenVerificationError,
     GreenVerificationRun,
 )
+from sdd_tdd_agent.git_integration import (
+    GitCommandRunner,
+    GitIntegrationError,
+    SystemGitCommandRunner,
+    commit_active_green_cycle,
+    prepare_active_green_commit,
+)
 from sdd_tdd_agent.implementation_command import continue_active_implementation
 from sdd_tdd_agent.implementation_review import (
     ImplementationReviewError,
@@ -128,6 +135,7 @@ def main(
     err: Optional[TextIO] = None,
     provider_dependencies: Optional[ProviderCommandDependencies] = None,
     test_runner: Optional[TestCommandRunner] = None,
+    git_runner: Optional[GitCommandRunner] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -202,6 +210,37 @@ def main(
             return 2
         output.write(
             f"Change approved: {approval.session_id} ({approval.risk_level})\n"
+        )
+        return 0
+
+    if arguments == ["git", "prepare"]:
+        try:
+            plan = prepare_active_green_commit(
+                project_root,
+                git_runner or SystemGitCommandRunner(),
+            )
+        except GitIntegrationError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            "Git commit approval "
+            f"{plan.approval_decision}: {plan.session_id} "
+            f"({plan.test_id}; {plan.risk_level}; {plan.change_digest})\n"
+        )
+        return 0
+
+    if arguments == ["git", "commit"]:
+        try:
+            committed = commit_active_green_cycle(
+                project_root,
+                git_runner or SystemGitCommandRunner(),
+            )
+        except GitIntegrationError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Git commit complete: {committed.session_id} "
+            f"({committed.test_id}; {committed.commit_sha})\n"
         )
         return 0
 

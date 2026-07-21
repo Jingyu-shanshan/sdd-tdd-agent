@@ -435,8 +435,27 @@ uv run agent approval reject "Needs a migration plan"
 
 The strict active-Session record binds the decision to the exact SHA-256 change
 digest. Malformed, stale, symlinked, concurrently changed, or different
-requests fail without replacing the existing decision. The next Git integration
-step will revalidate that digest before touching the index or creating a commit.
+requests fail without replacing the existing decision.
+
+After one implementation cycle reaches verified GREEN, optionally prepare and
+commit only its current test and production artifacts:
+
+```bash
+uv run agent git prepare
+uv run agent approval status
+uv run agent approval approve
+uv run agent git commit
+```
+
+Preparation runs a scoped, NUL-delimited Git status and creates the risk request
+without touching the index. Commit reloads the GREEN artifact digests and Git
+status, requires the same approved digest, stages only the two explicit paths,
+verifies the cached names, revalidates again, and uses `git commit --only` with
+the same paths. It never uses `git add .`; unrelated staged/worktree changes are
+left out. Git stdout/stderr is not persisted or returned. The verified HEAD and
+approval digest are returned, while the source-free approval record is archived
+inside the Session for audit. This opt-in sequence can run after every GREEN
+cycle before the next `agent continue` without changing legacy workflows.
 
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies

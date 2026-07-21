@@ -256,5 +256,14 @@ only when a failing acceptance test requires it.
   assessments, malformed records, symlinks, temporary-file collisions, stale
   Sessions, and changed digests. Git execution remains a separate boundary and
   must revalidate this digest before mutation.
+- Integrate Git as an optional injected shell-free boundary at the verified
+  GREEN phase. Derive the candidate solely from the validated current test and
+  production artifact paths/digests, parse scoped NUL-delimited porcelain
+  status, and create the approval request without index mutation. On commit,
+  require the matching approved/not-required digest, run exact pathspec `add`,
+  verify cached names, revalidate status and artifacts, then use `commit --only`
+  for those same paths and verify HEAD. Never stage the project root or include
+  unrelated staged changes. Archive only the source-free approval record by
+  digest after success; do not expose or persist Git process output.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

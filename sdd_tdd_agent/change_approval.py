@@ -6,6 +6,7 @@ from pathlib import Path, PurePosixPath
 from typing import Dict, Literal, Optional, Tuple, Union, cast
 
 from sdd_tdd_agent.project_status import load_project_status
+from sdd_tdd_agent.tdd_cycle import load_current_tdd_phase
 
 
 ChangeKind = Literal["added", "modified", "deleted"]
@@ -154,8 +155,14 @@ def _active_session(root: Path) -> Tuple[str, Path]:
         raise ChangeApprovalError("Unable to load active Session") from error
     if status.current_session is None:
         raise ChangeApprovalError("Project has no active Session")
-    if status.session_state != "DONE":
-        raise ChangeApprovalError("Change approval requires DONE state")
+    is_green = False
+    if status.session_state == "IMPLEMENTATION":
+        try:
+            is_green = load_current_tdd_phase(root, status.current_session) == "GREEN"
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+            raise ChangeApprovalError("Unable to load active Session") from error
+    if status.session_state != "DONE" and not is_green:
+        raise ChangeApprovalError("Change approval requires DONE or active GREEN state")
     path = root / ".agent" / "sessions" / status.current_session
     if path.is_symlink() or not path.is_dir():
         raise ChangeApprovalError("Active Session path must be a regular directory")
