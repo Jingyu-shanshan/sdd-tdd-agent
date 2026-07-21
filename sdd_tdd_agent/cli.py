@@ -53,6 +53,10 @@ from sdd_tdd_agent.implementation_review import (
     ImplementationReviewError,
     run_active_implementation_review,
 )
+from sdd_tdd_agent.integration_api import (
+    build_integration_manifest,
+    render_integration_manifest,
+)
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
@@ -151,6 +155,11 @@ def main(
 
     if arguments and arguments[0] == "hello":
         hello(output)
+        return 0
+
+    if arguments == ["integration", "manifest"]:
+        manifest = build_integration_manifest()
+        output.write(render_integration_manifest(manifest))
         return 0
 
     if arguments and arguments[0] == "init":

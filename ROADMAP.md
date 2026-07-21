@@ -173,4 +173,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Bounded project memory reuses tracked metadata, architecture, and conventions
   as one validated digest-bound snapshot shared across Sessions and requirement
   analysis, with a content-free read-only CLI status.
-- Plugin APIs, IDE integration, and additional languages and frameworks.
+- A versioned Registry-derived integration manifest now publishes the existing
+  external JSON Provider plugin API and stable read-only CLI/exit-code contract
+  for IDE clients without dynamic code loading or editor dependencies.
+- Additional languages and frameworks.

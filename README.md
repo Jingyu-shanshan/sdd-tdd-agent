@@ -534,6 +534,20 @@ GitHub Copilot remains planned until its JSONL programmatic event stream has a
 dedicated bounded contract. Every workflow run continues to use exactly one
 selected Provider.
 
+External plugins and IDE clients can discover the versioned integration
+contract without initializing or mutating a project:
+
+```bash
+uv run agent integration manifest
+```
+
+The plugin API is the existing explicit `json-command` external-process
+boundary: typed JSON stdin/stdout, tracked finite-timeout configuration, and no
+shell. The IDE API publishes stable read-only status, project-memory, and
+Provider-status commands plus exit codes. Provider lifecycle data comes from
+the Registry. Discovery never loads third-party Python code, starts a Provider,
+uses the network, or changes environment/project state.
+
 macOS and Linux Mint are target platforms. Every push and pull request now runs
 the repository quality suite on explicit Ubuntu 24.04 workers with Python 3.9,
 3.10, and 3.12. A separate compatibility job invokes the complete test suite

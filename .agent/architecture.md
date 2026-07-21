@@ -279,5 +279,11 @@ only when a failing acceptance test requires it.
   Requirement analysis consumes this snapshot; the CLI renders only its
   identity and byte sizes, never its content. Do not duplicate it in a database
   or model-managed store.
+- Publish plugin and IDE integration as one immutable versioned JSON manifest.
+  Reuse the explicit external-process `json-command` protocol for plugins and
+  derive Provider capabilities from the Registry. Expose only stable read-only
+  CLI commands and exit codes to IDE clients. Discovery runs without a project,
+  provider, network, environment mutation, dynamic Python loading, or daemon;
+  editor-specific extensions remain separate consumers of this contract.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
