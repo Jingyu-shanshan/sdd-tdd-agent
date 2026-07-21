@@ -469,6 +469,23 @@ approval digest are returned, while the source-free approval record is archived
 inside the Session for audit. This opt-in sequence can run after every GREEN
 cycle before the next `agent continue` without changing legacy workflows.
 
+Immediately after that scoped Agent commit, undo only the same current GREEN
+cycle and return it to `WRITE_TEST` with:
+
+```bash
+uv run agent rollback
+```
+
+Rollback requires the active GREEN artifacts to be unchanged and clean, and
+the single-parent Git HEAD subject/path set to match that exact Session and
+test. It restores only the two validated paths from HEAD's parent with native
+`git restore`, leaves HEAD and unrelated work unchanged, removes stale
+current-cycle evidence, and lets the normal `agent continue` loop retry the
+test. It cannot target arbitrary revisions, older cycles, or completed
+Sessions; malformed, mismatched, dirty, or concurrently changed inputs fail
+closed. If the atomic state update fails after file restoration, the same
+paths are restored from HEAD before the error is returned.
+
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies
 every state transition, explicit human gate, Blind production context, exact

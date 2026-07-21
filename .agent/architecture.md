@@ -274,6 +274,13 @@ only when a failing acceptance test requires it.
   for those same paths and verify HEAD. Never stage the project root or include
   unrelated staged changes. Archive only the source-free approval record by
   digest after success; do not expose or persist Git process output.
+- Roll back only the active current GREEN cycle whose exact Agent commit is
+  HEAD. Require clean validated artifact paths, a matching subject/path set,
+  and one verified parent; restore only those paths from the parent with native
+  shell-free `git restore` while preserving history and unrelated work. Then
+  atomically remove current-cycle artifacts/evidence and return the same test
+  to `WRITE_TEST`. If state replacement fails, restore the paths from HEAD;
+  reject arbitrary revisions, older cycles, dirty paths, and concurrent state.
 - Treat the existing tracked `project.yml`, `architecture.md`, and
   `conventions.md` as the sole cross-Session project-memory snapshot. Load them
   through one typed standard-library boundary that rejects unsafe, empty,
