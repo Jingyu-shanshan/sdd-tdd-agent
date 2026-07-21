@@ -150,7 +150,11 @@ and validate the core workflow; it is not the only planned ecosystem.
   `agent metrics` strictly aggregates active-Session call counts, success rate,
   duration, and verified usage without storing request, source, command, or
   output content.
-- Task/quality completion metrics and failure memory.
+- Exact task/test completion, build/test and refactor success, mean duration,
+  and verified cost-per-feature projection now reuse validated plans, state,
+  and telemetry. Bounded atomic cross-Session failure memory merges only
+  content-free fingerprints and occurrence/Session counts; `agent metrics
+  quality` and `agent failures` expose both views.
 - Human approval gates and Git integration.
 
 ## v1.0: Model and ecosystem extensibility

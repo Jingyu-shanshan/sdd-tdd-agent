@@ -239,5 +239,13 @@ only when a failing acceptance test requires it.
   contract supplies them; never estimate billing. Strictly aggregate active-
   Session call counts, rates, duration, and complete reported usage through
   `agent metrics`.
+- Project exact task/test quality from the existing validated plan parser,
+  trusted completed-test prefix, and telemetry rather than adding counters to
+  workflow state. Report task/test completion, test/refactor success, mean call
+  duration, and only complete verified cost through `agent metrics quality`.
+  For failed events, atomically merge a bounded content-free fingerprint under
+  `.agent/memories/failures.json`; retain only operation/kind/sanitized tool,
+  failure mode/exit code, occurrences, and Session IDs. Expose it through
+  `agent failures` without model interpretation or private error content.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

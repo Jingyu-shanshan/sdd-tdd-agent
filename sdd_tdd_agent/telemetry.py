@@ -12,6 +12,7 @@ from sdd_tdd_agent.model_adapter import (
     ProcessResult,
     ProcessRunner,
 )
+from sdd_tdd_agent.failure_memory import FailureMemoryError, record_failure
 from sdd_tdd_agent.project_status import load_project_status
 from sdd_tdd_agent.red_execution import (
     TestCommandProcessResult,
@@ -161,6 +162,19 @@ class TelemetryRecorder:
     def record(self, event: TelemetryEvent) -> None:
         """Validate and append one canonical JSON event with no output payload."""
         _validate_event(asdict(event), self.session_id)
+        if not event.success:
+            try:
+                record_failure(
+                    self._root,
+                    event.session_id,
+                    event.operation,
+                    event.kind,
+                    event.tool,
+                    "exception" if event.returncode is None else "nonzero_exit",
+                    event.returncode,
+                )
+            except FailureMemoryError as error:
+                raise TelemetryError("Failure memory could not be recorded") from error
         path = _metrics_path(self._root, self.session_id, create=True)
         serialized = (
             json.dumps(asdict(event), sort_keys=True, separators=(",", ":")) + "\n"
@@ -394,28 +408,50 @@ def _validate_event(value: object, session_id: str) -> Dict[str, object]:
     return event
 
 
-def load_session_metrics(root: Path, session_id: str) -> SessionMetrics:
-    """Strictly aggregate one Session's bounded append-only telemetry."""
+def load_session_events(root: Path, session_id: str) -> Tuple[TelemetryEvent, ...]:
+    """Strictly load one Session's bounded append-only telemetry events."""
     resolved_id = _session_id(session_id)
     path = _metrics_path(root.resolve(), resolved_id, create=False)
     if not path.exists():
-        return SessionMetrics(resolved_id, 0, 0, 0, 0, 0.0, None, None, None)
+        return ()
     try:
         if path.stat().st_size > MAX_METRICS_BYTES:
             raise TelemetryError("Telemetry file is too large")
         lines = path.read_text(encoding="utf-8").splitlines()
-        events = tuple(_validate_event(json.loads(line), resolved_id) for line in lines)
+        values = tuple(_validate_event(json.loads(line), resolved_id) for line in lines)
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise TelemetryError("Telemetry file is invalid") from error
-    model_calls = sum(event["kind"] == "model" for event in events)
-    test_calls = sum(event["kind"] == "test" for event in events)
-    successful = sum(event["success"] is True for event in events)
-    duration = round(
-        sum(float(cast(float, event["duration_seconds"])) for event in events),
-        6,
+    return tuple(
+        TelemetryEvent(
+            cast(int, value["schema_version"]),
+            cast(str, value["session_id"]),
+            cast(str, value["operation"]),
+            cast(str, value["kind"]),
+            cast(str, value["tool"]),
+            cast(bool, value["success"]),
+            cast(Optional[int], value["returncode"]),
+            float(cast(float, value["duration_seconds"])),
+            cast(Optional[str], value["prompt_version"]),
+            cast(Optional[str], value["prompt_sha256"]),
+            cast(Optional[int], value["input_tokens"]),
+            cast(Optional[int], value["output_tokens"]),
+            cast(Optional[float], value["cost_usd"]),
+            cast(str, value["usage_status"]),
+        )
+        for value in values
     )
+
+
+def load_session_metrics(root: Path, session_id: str) -> SessionMetrics:
+    """Strictly aggregate one Session's bounded append-only telemetry."""
+    resolved_id = _session_id(session_id)
+    events = load_session_events(root, resolved_id)
+    model_calls = sum(event.kind == "model" for event in events)
+    test_calls = sum(event.kind == "test" for event in events)
+    successful = sum(event.success for event in events)
+    duration = round(sum(event.duration_seconds for event in events), 6)
     usage_complete = bool(events) and all(
-        event["usage_status"] == "reported" for event in events
+        event.usage_status == "reported" for event in events
     )
     return SessionMetrics(
         resolved_id,
@@ -424,13 +460,13 @@ def load_session_metrics(root: Path, session_id: str) -> SessionMetrics:
         test_calls,
         successful,
         duration,
-        sum(cast(int, event["input_tokens"]) for event in events)
+        sum(cast(int, event.input_tokens) for event in events)
         if usage_complete
         else None,
-        sum(cast(int, event["output_tokens"]) for event in events)
+        sum(cast(int, event.output_tokens) for event in events)
         if usage_complete
         else None,
-        round(sum(float(cast(float, event["cost_usd"])) for event in events), 6)
+        round(sum(float(cast(float, event.cost_usd)) for event in events), 6)
         if usage_complete
         else None,
     )

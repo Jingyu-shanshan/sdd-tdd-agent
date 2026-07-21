@@ -401,6 +401,24 @@ Strict aggregation reports call counts, success rate, total duration, and usage
 when a future verified Provider supplies it. Runtime files remain below the
 ignored `.agent/metrics/` directory.
 
+Quality projection and durable failure memory build on that telemetry without
+storing private content:
+
+```bash
+uv run agent metrics quality
+uv run agent failures
+```
+
+Quality metrics reuse the validated test-plan parser and trusted completed-test
+prefix to calculate exact task/test completion rates. They combine validated
+test/refactor events for success rates and mean duration; cost per feature stays
+unavailable unless every event contains verified Provider usage. Failed events
+also merge into `.agent/memories/failures.json` by a deterministic fingerprint
+of operation, kind, sanitized tool, failure mode, and optional exit code. The
+bounded atomic artifact records only occurrence counts and Session IDs—never
+errors, Prompt/source/review content, arguments, or output—so recurring failures
+can guide later work without leaking the failed context.
+
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies
 every state transition, explicit human gate, Blind production context, exact

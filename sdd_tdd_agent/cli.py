@@ -21,6 +21,11 @@ from sdd_tdd_agent.design_review import (
     reject_active_design,
 )
 from sdd_tdd_agent.feature_session import create_feature_session
+from sdd_tdd_agent.failure_memory import (
+    FailureMemoryError,
+    load_failure_memories,
+    render_failure_memories,
+)
 from sdd_tdd_agent.cycle_completion import (
     CycleCompletionError,
     ImplementationCompletionRun,
@@ -49,6 +54,11 @@ from sdd_tdd_agent.production_source_command import ProductionSourceCommandRun
 from sdd_tdd_agent.production_source_workspace import ProductionSourceWorkspaceError
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status, render_project_status
+from sdd_tdd_agent.quality_metrics import (
+    QualityMetricsError,
+    load_session_quality_metrics,
+    render_session_quality_metrics,
+)
 from sdd_tdd_agent.requirement_review import (
     RequirementReviewError,
     approve_active_requirement,
@@ -142,6 +152,30 @@ def main(
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(render_session_metrics(metrics))
+        return 0
+
+    if arguments == ["metrics", "quality"]:
+        try:
+            status = load_project_status(project_root)
+            if status.current_session is None:
+                raise QualityMetricsError("Project has no active Session")
+            metrics = load_session_quality_metrics(
+                project_root,
+                status.current_session,
+            )
+        except (OSError, UnicodeError, ValueError, QualityMetricsError) as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_session_quality_metrics(metrics))
+        return 0
+
+    if arguments == ["failures"]:
+        try:
+            memories = load_failure_memories(project_root)
+        except FailureMemoryError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_failure_memories(memories))
         return 0
 
     if arguments and arguments[0] == "feature":
