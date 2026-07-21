@@ -2,6 +2,13 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
+from sdd_tdd_agent.change_approval import (
+    ChangeApprovalError,
+    approve_active_change,
+    load_active_change_approval,
+    reject_active_change,
+    render_change_approval,
+)
 from sdd_tdd_agent.analyze_command import (
     analyze_active_requirement,
     load_analyzer_config,
@@ -176,6 +183,40 @@ def main(
             error_output.write(f"Error: {error}\n")
             return 2
         output.write(render_failure_memories(memories))
+        return 0
+
+    if arguments == ["approval", "status"]:
+        try:
+            approval = load_active_change_approval(project_root)
+        except ChangeApprovalError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_change_approval(approval))
+        return 0
+
+    if arguments == ["approval", "approve"]:
+        try:
+            approval = approve_active_change(project_root)
+        except ChangeApprovalError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Change approved: {approval.session_id} ({approval.risk_level})\n"
+        )
+        return 0
+
+    if arguments[0:2] == ["approval", "reject"]:
+        try:
+            approval = reject_active_change(
+                project_root,
+                " ".join(arguments[2:]),
+            )
+        except ChangeApprovalError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Change rejected: {approval.session_id} ({approval.risk_level})\n"
+        )
         return 0
 
     if arguments and arguments[0] == "feature":

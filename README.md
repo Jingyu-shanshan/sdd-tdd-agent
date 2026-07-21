@@ -419,6 +419,25 @@ bounded atomic artifact records only occurrence counts and Session IDs—never
 errors, Prompt/source/review content, arguments, or output—so recurring failures
 can guide later work without leaking the failed context.
 
+Git-bound project changes use a separate digest-bound risk approval gate. The
+Git integration prepares the exact path/kind set; the approval layer never
+reads or stores source or diff content. Documentation, tests, and Session
+evidence are low risk and record that approval is not required. Production
+changes are medium risk, while deletions, dependency manifests, Agent control
+files, and GitHub workflows are high risk. Medium/high changes remain pending
+until an explicit human decision:
+
+```bash
+uv run agent approval status
+uv run agent approval approve
+uv run agent approval reject "Needs a migration plan"
+```
+
+The strict active-Session record binds the decision to the exact SHA-256 change
+digest. Malformed, stale, symlinked, concurrently changed, or different
+requests fail without replacing the existing decision. The next Git integration
+step will revalidate that digest before touching the index or creating a commit.
+
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies
 every state transition, explicit human gate, Blind production context, exact

@@ -155,7 +155,10 @@ and validate the core workflow; it is not the only planned ecosystem.
   and telemetry. Bounded atomic cross-Session failure memory merges only
   content-free fingerprints and occurrence/Session counts; `agent metrics
   quality` and `agent failures` expose both views.
-- Human approval gates and Git integration.
+- Risk-bound human approval now canonicalizes exact path/kind changes, records
+  low-risk exemption, and requires explicit digest-bound approval/rejection for
+  medium/high-risk Git commits without storing source or diff content.
+- Git index and per-cycle commit integration.
 
 ## v1.0: Model and ecosystem extensibility
 

@@ -247,5 +247,14 @@ only when a failing acceptance test requires it.
   `.agent/memories/failures.json`; retain only operation/kind/sanitized tool,
   failure mode/exit code, occurrences, and Session IDs. Expose it through
   `agent failures` without model interpretation or private error content.
+- Gate Git-bound changes behind a pure typed risk assessment and one strict
+  active-Session approval record. Canonicalize validated relative path/kind
+  records into a SHA-256 digest, classify documentation/test evidence as low,
+  production changes as medium, and deletions or control/dependency files as
+  high. Record low risk as not requiring approval and require an explicit
+  source-free CLI approve/reject decision for medium/high risk. Reject forged
+  assessments, malformed records, symlinks, temporary-file collisions, stale
+  Sessions, and changed digests. Git execution remains a separate boundary and
+  must revalidate this digest before mutation.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.
