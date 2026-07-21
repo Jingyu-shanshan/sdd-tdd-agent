@@ -285,5 +285,10 @@ only when a failing acceptance test requires it.
   CLI commands and exit codes to IDE clients. Discovery runs without a project,
   provider, network, environment mutation, dynamic Python loading, or daemon;
   editor-specific extensions remain separate consumers of this contract.
+- Publish only verified target ecosystems through an immutable typed Registry:
+  Java/Maven/Gradle/JUnit 5 and TypeScript/npm/pnpm/Yarn/Jest/Vitest/Angular.
+  Keep discovery read-only and separate from authoritative project detection.
+  Do not list a future language or framework before its detection, isolated
+  test/full-suite commands, incremental TDD behavior, and real fixture exist.
 - Do not add Typer, Pydantic, SQLite, LangGraph, or other dependencies before a
   concrete behavior needs them and a human approves the dependency.

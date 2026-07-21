@@ -176,4 +176,7 @@ and validate the core workflow; it is not the only planned ecosystem.
 - A versioned Registry-derived integration manifest now publishes the existing
   external JSON Provider plugin API and stable read-only CLI/exit-code contract
   for IDE clients without dynamic code loading or editor dependencies.
-- Additional languages and frameworks.
+- The original documented ecosystem scope is complete and discoverable through
+  a typed Registry: Java with Maven/Gradle/JUnit 5, and TypeScript with npm/
+  pnpm/Yarn plus Jest/Vitest/Angular. Future languages/frameworks require their
+  own detection, command, TDD, and real-fixture evidence before being listed.

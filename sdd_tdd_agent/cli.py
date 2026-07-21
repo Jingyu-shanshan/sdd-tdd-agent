@@ -27,6 +27,7 @@ from sdd_tdd_agent.design_review import (
     load_active_design_review,
     reject_active_design,
 )
+from sdd_tdd_agent.ecosystem_registry import list_ecosystems, render_ecosystems
 from sdd_tdd_agent.feature_session import create_feature_session
 from sdd_tdd_agent.failure_memory import (
     FailureMemoryError,
@@ -160,6 +161,10 @@ def main(
     if arguments == ["integration", "manifest"]:
         manifest = build_integration_manifest()
         output.write(render_integration_manifest(manifest))
+        return 0
+
+    if arguments == ["ecosystem", "list"]:
+        output.write(render_ecosystems(list_ecosystems()))
         return 0
 
     if arguments and arguments[0] == "init":

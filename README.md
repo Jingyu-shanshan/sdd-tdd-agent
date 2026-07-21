@@ -486,6 +486,18 @@ and Angular watch behavior is disabled. Ambiguous lockfiles, conflicting
 `packageManager` metadata, unverified frameworks, unsafe paths, and unsupported
 layouts fail explicitly.
 
+Inspect the exact implemented target ecosystem matrix without executing a build
+or creating project metadata:
+
+```bash
+uv run agent ecosystem list
+```
+
+The documented scope is Java with Maven/Gradle/JUnit 5 and TypeScript with
+npm/pnpm/Yarn plus Jest/Vitest/Angular. Other languages and frameworks are not
+claimed until they have detection, command planning, TDD, and real-fixture
+evidence.
+
 For another provider, omit the protocol or set it to `json-command` and supply a
 compatible JSON stdin/stdout command. Every command token must be a JSON string.
 
