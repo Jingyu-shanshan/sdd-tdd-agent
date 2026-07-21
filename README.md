@@ -35,7 +35,10 @@ metadata. Fresh workspaces also record Java/Maven projects detected by
 also record JUnit 5 as their test framework. Root TypeScript projects are
 detected from strict `package.json` metadata plus an explicit `packageManager`
 or one consistent lockfile; configured Jest, Vitest, and Angular test scripts
-are reported without guessing a package manager or framework.
+are reported without guessing a package manager or framework. Fresh metadata
+also records configured Maven or Gradle Checkstyle, SpotBugs, and PMD tools,
+plus Node ESLint and Prettier tools when both dependency and script evidence is
+present. Discovery is read-only and never installs or runs those tools.
 
 The tracked `project.yml`, `architecture.md`, and `conventions.md` files are the
 canonical cross-Session project memory. Inspect its validated snapshot identity

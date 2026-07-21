@@ -26,6 +26,7 @@ class NodeProjectMetadata:
     test_framework: str
     test_script: str
     is_angular: bool
+    quality_tools: Tuple[str, ...] = ()
 
 
 def _strict_object(pairs: List[Tuple[str, object]]) -> Dict[str, object]:
@@ -152,6 +153,22 @@ def _detect_test_framework(
     return next(iter(candidates))
 
 
+def _detect_quality_tools(
+    package: Dict[str, object],
+    dependencies: Set[str],
+) -> Tuple[str, ...]:
+    scripts = package.get("scripts")
+    if not isinstance(scripts, dict):
+        raise NodeProjectError("package.json scripts must be a string map")
+    commands = tuple(value for value in scripts.values() if isinstance(value, str))
+    return tuple(
+        tool
+        for tool in ("eslint", "prettier")
+        if tool in dependencies
+        and any(_contains_command(command, tool) for command in commands)
+    )
+
+
 def load_node_project(root: Path) -> NodeProjectMetadata:
     """Load strict package-manager and test-framework metadata without mutation."""
     package = _load_package(root / "package.json")
@@ -164,4 +181,5 @@ def load_node_project(root: Path) -> NodeProjectMetadata:
         test_framework=framework,
         test_script=script,
         is_angular=framework == "angular",
+        quality_tools=_detect_quality_tools(package, dependencies),
     )

@@ -8,6 +8,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Project initialization and status.
 - Maven and Gradle project detection.
 - JUnit 5 detection and incremental test execution.
+- Read-only discovery of explicitly configured Maven/Gradle quality plugins and
+  Node quality scripts for fresh project metadata.
 - Feature and bug Sessions with shared safe creation, activation, and downstream
   workflow compatibility.
 - Explicit human requirement review with approve/reject transitions.
