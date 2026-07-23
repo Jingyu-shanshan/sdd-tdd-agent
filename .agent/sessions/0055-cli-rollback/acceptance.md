@@ -4,4 +4,4 @@
 - [x] The TDD cycle returns safely to `WRITE_TEST` for retry.
 - [x] Unrelated work and Git history are preserved.
 - [x] Failure and concurrency paths recover without data loss.
-- [ ] Local and hosted quality gates pass.
+- [x] Local and hosted quality gates pass.

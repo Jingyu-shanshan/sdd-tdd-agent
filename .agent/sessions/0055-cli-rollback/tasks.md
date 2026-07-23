@@ -16,5 +16,5 @@
 
 ## Task 4: Publish
 
-- [ ] Commit and push the complete task.
-- [ ] Require hosted CI and toolchain success.
+- [x] Commit and push the complete task.
+- [x] Require hosted CI and toolchain success.

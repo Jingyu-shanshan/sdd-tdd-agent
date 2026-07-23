@@ -4,6 +4,20 @@ A CLI platform for software-design-driven development (SDD) and incremental
 test-driven development (TDD), built around a single agent with isolated
 contexts.
 
+## Installation
+
+Python 3.9 or newer is required. Install the pinned 0.1.0 release with `uv`:
+
+```bash
+uv tool install https://github.com/Jingyu-shanshan/sdd-tdd-agent/releases/download/v0.1.0/sdd_tdd_agent-0.1.0-py3-none-any.whl
+agent platform doctor
+agent hello
+```
+
+Linux Mint users should require `Readiness: ready` from the Doctor before
+starting a workflow. Project toolchains and the selected Agent Provider CLI
+remain explicit host prerequisites.
+
 ## Current capabilities
 
 The current v0.1 core provides a working public CLI from project/session setup
@@ -210,9 +224,8 @@ paths. Valid output writes deterministic `test-plan.md` and enters
 `IMPLEMENTATION`; it does not write or run test code. Strict provider-neutral
 JSON command and Codex exec adapters implement this generator boundary with an
 exact nested case Schema, ephemeral read-only execution, private temporary
-exchange cleanup, and safe errors. CLI orchestration remains deferred to the
-next increment. Generate the active Session plan through the currently selected
-Provider with:
+exchange cleanup, and safe errors. Generate the active Session plan through the
+currently selected Provider with:
 
 ```bash
 uv run agent tests
