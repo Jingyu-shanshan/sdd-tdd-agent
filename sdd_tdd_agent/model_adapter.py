@@ -62,6 +62,16 @@ STRUCTURED_CLI_ARGUMENTS = {
         "--no-session-persistence",
     ),
     "cursor-exec": ("-p", "--output-format", "json"),
+    "pi-exec": (
+        "-p",
+        "--no-session",
+        "--no-tools",
+        "--no-context-files",
+        "--no-extensions",
+        "--no-skills",
+        "--no-prompt-templates",
+        "--no-approve",
+    ),
 }
 
 
@@ -92,6 +102,7 @@ class CommandAnalyzerConfig:
             "codex-exec",
             "claude-exec",
             "cursor-exec",
+            "pi-exec",
         }:
             raise ValueError("Analyzer protocol is invalid")
         if self.protocol in STRUCTURED_CLI_ARGUMENTS and len(self.command) != 1:
@@ -213,14 +224,7 @@ def _json_object(value: str) -> Dict[str, object]:
 
 
 def _normalized_provider_result(stdout: str) -> str:
-    try:
-        output_size = len(stdout.encode("utf-8"))
-    except UnicodeEncodeError as error:
-        raise RequirementAnalyzerError(
-            "Provider returned invalid structured JSON"
-        ) from error
-    if output_size > STRUCTURED_CLI_OUTPUT_LIMIT:
-        raise RequirementAnalyzerError("Provider structured output exceeds limit")
+    _validate_structured_output_size(stdout)
     envelope = _json_object(stdout)
     if (
         envelope.get("type") != "result"
@@ -242,6 +246,23 @@ def _normalized_provider_result(stdout: str) -> str:
                 "Provider structured result must be a JSON object"
             )
         payload = _json_object(result)
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def _validate_structured_output_size(stdout: str) -> None:
+    try:
+        output_size = len(stdout.encode("utf-8"))
+    except UnicodeEncodeError as error:
+        raise RequirementAnalyzerError(
+            "Provider returned invalid structured JSON"
+        ) from error
+    if output_size > STRUCTURED_CLI_OUTPUT_LIMIT:
+        raise RequirementAnalyzerError("Provider structured output exceeds limit")
+
+
+def _normalized_pi_result(stdout: str) -> str:
+    _validate_structured_output_size(stdout)
+    payload = _json_object(stdout)
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
@@ -269,9 +290,14 @@ class StructuredCliRunner:
         )
         if result.returncode != 0:
             return ProcessResult(result.returncode, "", "")
+        normalized = (
+            _normalized_pi_result(result.stdout)
+            if self.config.protocol == "pi-exec"
+            else _normalized_provider_result(result.stdout)
+        )
         return ProcessResult(
             returncode=0,
-            stdout=_normalized_provider_result(result.stdout),
+            stdout=normalized,
             stderr="",
         )
 

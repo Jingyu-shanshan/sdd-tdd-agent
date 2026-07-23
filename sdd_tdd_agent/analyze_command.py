@@ -24,6 +24,7 @@ SUPPORTED_PROTOCOLS = {
     "codex-exec",
     "claude-exec",
     "cursor-exec",
+    "pi-exec",
 }
 
 
@@ -108,7 +109,7 @@ def load_analyzer_config(root: Path) -> CommandAnalyzerConfig:
         raise AnalyzerConfigurationError(
             "Codex analyzer command must contain one executable"
         )
-    if protocol in {"claude-exec", "cursor-exec"} and len(command) != 1:
+    if protocol in {"claude-exec", "cursor-exec", "pi-exec"} and len(command) != 1:
         raise AnalyzerConfigurationError(
             "Structured CLI analyzer command must contain one executable"
         )

@@ -21,7 +21,7 @@ remain explicit host prerequisites.
 
 ## Current capabilities
 
-The current v0.1 core provides a working public CLI from project/session setup
+The current v0.2 core provides a working public CLI from project/session setup
 through requirement, design, task, and test-plan approval gates; isolated
 incremental TDD implementation; deterministic review; final verification; and
 DONE. Model and target-process boundaries remain typed, injected, and testable.
@@ -550,6 +550,7 @@ Select an implemented Provider explicitly:
 uv run wssagent provider use codex
 uv run wssagent provider use claude-code
 uv run wssagent provider use cursor
+uv run wssagent provider use pi
 ```
 
 The default Provider is used for every model operation unless a source-writing
@@ -581,7 +582,7 @@ process so this platform continues to use `shell=False`. No install is attempted
 from non-interactive selection, and authentication remains a separate manual
 step.
 
-Codex, Claude Code, Cursor, and the custom JSON adapter are implemented. Claude
+Codex, Claude Code, Cursor, Pi, and the custom JSON adapter are implemented. Claude
 Code uses its documented print-mode JSON output with plan permissions and no
 session persistence. Cursor uses print-mode JSON output without `--force`, so
 the CLI boundary does not authorize direct project writes. Both normalize their
@@ -589,6 +590,12 @@ successful result envelope into the same strict typed JSON validators used by
 every existing workflow. Their guarded install plans use the official
 [Claude Code installer](https://code.claude.com/docs/en/installation) and
 [Cursor CLI installer](https://docs.cursor.com/en/cli/installation).
+
+Pi uses official print mode with sessions, tools, context files, extensions,
+skills, prompt templates, and project-local configuration disabled. The adapter
+accepts only one bounded JSON object from stdout and uses the official
+[Pi Coding Agent installer](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/README.md).
+Authentication remains explicit through Pi's own API-key or `/login` flow.
 
 GitHub Copilot remains planned until its JSONL programmatic event stream has a
 dedicated bounded contract. Every workflow run continues to use exactly one

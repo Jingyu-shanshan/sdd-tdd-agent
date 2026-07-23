@@ -55,6 +55,7 @@ def test_should_derive_provider_capabilities_in_registry_order() -> None:
             "status": "adapter-ready",
             "protocol": "cursor-exec",
         },
+        {"key": "pi", "status": "adapter-ready", "protocol": "pi-exec"},
         {"key": "copilot", "status": "planned", "protocol": None},
     ]
 

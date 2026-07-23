@@ -92,6 +92,19 @@ PROVIDERS = (
         ),
     ),
     ProviderDefinition(
+        key="pi",
+        display_name="Pi Coding Agent",
+        status="adapter-ready",
+        platforms=("macos", "linux-mint"),
+        protocol="pi-exec",
+        command=("pi",),
+        install_plan=ProviderInstallPlan(
+            source_url="https://pi.dev/install.sh",
+            download_command=("curl", "-fsSL", "--output"),
+            installer_command=("sh",),
+        ),
+    ),
+    ProviderDefinition(
         key="copilot",
         display_name="GitHub Copilot",
         status="planned",
@@ -133,6 +146,7 @@ def load_provider_selection(
         "codex-exec": "codex",
         "claude-exec": "claude-code",
         "cursor-exec": "cursor",
+        "pi-exec": "pi",
     }
     provider_key = provider_keys.get(config.protocol, "custom-json")
     provider = next(item for item in PROVIDERS if item.key == provider_key)
