@@ -10,6 +10,7 @@ from sdd_tdd_agent.provider_registry import (
     ProviderInstallPlan,
     ProviderSelection,
     get_provider,
+    load_provider_config,
     select_provider,
     validate_provider_selection,
 )
@@ -216,6 +217,7 @@ def use_provider(
     provider_key: str,
     dependencies: ProviderCommandDependencies,
     output: TextIO,
+    role: Optional[str] = None,
 ) -> ProviderUseResult:
     """Select a provider, installing a missing CLI only after TTY confirmation."""
     provider = validate_provider_selection(provider_key)
@@ -223,12 +225,14 @@ def use_provider(
         raise ProviderInstallError("Provider adapter command is unavailable")
     executable_name = provider.command[0]
     config = load_analyzer_config(root)
+    if role is not None:
+        load_provider_config(root, role)
     if not dependencies.input.isatty():
-        selection = select_provider(root, provider.key)
+        selection = select_provider(root, provider.key, role)
         return ProviderUseResult(selection, None, False)
     executable = dependencies.locator.locate(executable_name)
     if executable is not None:
-        selection = select_provider(root, provider.key)
+        selection = select_provider(root, provider.key, role)
         return ProviderUseResult(selection, None, False)
     _validate_install_platform(provider.platforms, dependencies.platform)
     output.write(
@@ -244,7 +248,7 @@ def use_provider(
         timeout_seconds=config.timeout_seconds,
         platform=dependencies.platform,
     ).install(provider.key)
-    selection = select_provider(root, provider.key)
+    selection = select_provider(root, provider.key, role)
     return ProviderUseResult(selection, installed.version, False)
 
 

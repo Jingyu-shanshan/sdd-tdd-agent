@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from sdd_tdd_agent.analyze_command import load_analyzer_config
+from sdd_tdd_agent.model_adapter import CommandAnalyzerConfig
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,7 @@ class ProviderSelection:
     status: str
     protocol: str
     timeout_seconds: float
+    role: Optional[str] = None
 
 
 class ProviderSelectionError(ValueError):
@@ -97,6 +99,11 @@ PROVIDERS = (
     ),
 )
 
+PROVIDER_ROLE_KEYS = {
+    "test-source": "test_source_provider",
+    "production-source": "production_source_provider",
+}
+
 
 def list_providers() -> Tuple[ProviderDefinition, ...]:
     """Return all known providers in deterministic display order."""
@@ -116,9 +123,12 @@ def render_provider_list(providers: Tuple[ProviderDefinition, ...]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def load_provider_selection(root: Path) -> ProviderSelection:
+def load_provider_selection(
+    root: Path,
+    role: Optional[str] = None,
+) -> ProviderSelection:
     """Load the selected provider without executing or resolving its command."""
-    config = load_analyzer_config(root)
+    config = load_provider_config(root, role) if role else load_analyzer_config(root)
     provider_keys = {
         "codex-exec": "codex",
         "claude-exec": "claude-code",
@@ -131,6 +141,7 @@ def load_provider_selection(root: Path) -> ProviderSelection:
         status=provider.status,
         protocol=config.protocol,
         timeout_seconds=config.timeout_seconds,
+        role=role,
     )
 
 
@@ -154,6 +165,47 @@ def get_provider(provider_key: str) -> ProviderDefinition:
         if provider.key == provider_key:
             return provider
     raise ProviderSelectionError(f"Unknown provider: {provider_key}")
+
+
+def _provider_role_key(role: str) -> str:
+    try:
+        return PROVIDER_ROLE_KEYS[role]
+    except KeyError as error:
+        raise ProviderSelectionError(f"Unknown provider role: {role}") from error
+
+
+def _load_role_provider(root: Path, role: str) -> Optional[ProviderDefinition]:
+    key = _provider_role_key(role)
+    selected: Optional[str] = None
+    for line in (
+        (root / ".agent" / "config.yml").read_text(encoding="utf-8").splitlines()
+    ):
+        if not line or line[0].isspace():
+            continue
+        name, separator, value = line.partition(":")
+        if name != key:
+            continue
+        if selected is not None or not separator or not value.strip():
+            raise ProviderSelectionError(f"Invalid provider role config: {role}")
+        selected = value.strip()
+    if selected is None:
+        return None
+    return validate_provider_selection(selected)
+
+
+def load_provider_config(root: Path, role: str) -> CommandAnalyzerConfig:
+    """Load a role-specific provider config, falling back to the default."""
+    default = load_analyzer_config(root)
+    provider = _load_role_provider(root, role)
+    if provider is None:
+        return default
+    if provider.command is None or provider.protocol is None:
+        raise ProviderSelectionError(f"Provider is not configured: {provider.key}")
+    return CommandAnalyzerConfig(
+        provider.command,
+        default.timeout_seconds,
+        provider.protocol,
+    )
 
 
 def _validate_selectable(provider: ProviderDefinition) -> None:
@@ -207,13 +259,41 @@ def _provider_config(content: str, provider: ProviderDefinition) -> str:
     return "\n".join(rendered) + "\n"
 
 
-def select_provider(root: Path, provider_key: str) -> ProviderSelection:
+def _provider_role_config(
+    content: str,
+    provider: ProviderDefinition,
+    role: str,
+) -> str:
+    key = _provider_role_key(role)
+    lines = content.splitlines()
+    replacement = f"{key}: {provider.key}"
+    for index, line in enumerate(lines):
+        if line.startswith(f"{key}:"):
+            lines[index] = replacement
+            return "\n".join(lines) + "\n"
+    lines.append(replacement)
+    return "\n".join(lines) + "\n"
+
+
+def select_provider(
+    root: Path,
+    provider_key: str,
+    role: Optional[str] = None,
+) -> ProviderSelection:
     """Atomically select one adapter-ready provider in tracked configuration."""
+    if role is not None:
+        _provider_role_key(role)
+        _load_role_provider(root, role)
     provider = _find_provider(provider_key)
     _validate_selectable(provider)
     current = load_analyzer_config(root)
     config_path = root / ".agent" / "config.yml"
-    updated = _provider_config(config_path.read_text(encoding="utf-8"), provider)
+    content = config_path.read_text(encoding="utf-8")
+    updated = (
+        _provider_config(content, provider)
+        if role is None
+        else _provider_role_config(content, provider, role)
+    )
     temporary = config_path.with_name(".config.yml.provider.tmp")
     temporary.write_text(updated, encoding="utf-8")
     temporary.replace(config_path)
@@ -222,4 +302,5 @@ def select_provider(root: Path, provider_key: str) -> ProviderSelection:
         status=provider.status,
         protocol=provider.protocol or current.protocol,
         timeout_seconds=current.timeout_seconds,
+        role=role,
     )

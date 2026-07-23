@@ -24,7 +24,7 @@ jobs:
         run: uv sync --locked --dev
       - name: Verify real Linux Mint host readiness
         run: |
-          uv run agent platform doctor > "$RUNNER_TEMP/platform-doctor.txt"
+          uv run wssagent platform doctor > "$RUNNER_TEMP/platform-doctor.txt"
           grep --fixed-strings --line-regexp "Distribution: linuxmint" "$RUNNER_TEMP/platform-doctor.txt"
           grep --fixed-strings --line-regexp "Platform support: supported-target" "$RUNNER_TEMP/platform-doctor.txt"
           grep --fixed-strings --line-regexp "Readiness: ready" "$RUNNER_TEMP/platform-doctor.txt"

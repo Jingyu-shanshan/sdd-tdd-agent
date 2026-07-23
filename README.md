@@ -6,12 +6,13 @@ contexts.
 
 ## Installation
 
-Python 3.9 or newer is required. Install the pinned 0.1.0 release with `uv`:
+Python 3.9 or newer is required. From a checked-out repository, install with
+`uv`:
 
 ```bash
-uv tool install https://github.com/Jingyu-shanshan/sdd-tdd-agent/releases/download/v0.1.0/sdd_tdd_agent-0.1.0-py3-none-any.whl
-agent platform doctor
-agent hello
+uv tool install .
+wssagent platform doctor
+wssagent hello
 ```
 
 Linux Mint users should require `Readiness: ready` from the Doctor before
@@ -26,7 +27,7 @@ incremental TDD implementation; deterministic review; final verification; and
 DONE. Model and target-process boundaries remain typed, injected, and testable.
 
 ```bash
-uv run agent hello
+uv run wssagent hello
 ```
 
 Expected output:
@@ -38,7 +39,7 @@ Hello, World!
 Initialize the current project's agent workspace with:
 
 ```bash
-uv run agent init
+uv run wssagent init
 ```
 
 The command creates `.agent/` metadata plus the `memories`, `sessions`,
@@ -59,7 +60,7 @@ canonical cross-Session project memory. Inspect its validated snapshot identity
 without printing its content:
 
 ```bash
-uv run agent memory
+uv run wssagent memory
 ```
 
 The loader rejects missing, empty, unsafe, invalid UTF-8, concurrently changed,
@@ -69,13 +70,13 @@ typed snapshot; no database, embedding store, or second mutable copy is used.
 Inspect project classification and the active development session with:
 
 ```bash
-uv run agent status
+uv run wssagent status
 ```
 
 Start a feature SDD session with:
 
 ```bash
-uv run agent feature "Support PDF export"
+uv run wssagent feature "Support PDF export"
 ```
 
 The command records the request, creates the eight standard session artifacts,
@@ -84,7 +85,7 @@ sets the workflow state to `ANALYSIS`, and activates the new Session.
 Start a bug-fix SDD session through the same workflow with:
 
 ```bash
-uv run agent bug "Fix empty PDF export"
+uv run wssagent bug "Fix empty PDF export"
 ```
 
 The bug command applies the same normalization, safe unique-ID, exclusive
@@ -119,7 +120,7 @@ model selection or store credentials in project configuration. Analyze the
 active Session with:
 
 ```bash
-uv run agent analyze
+uv run wssagent analyze
 ```
 
 Successful analysis stops at `REQUIREMENT_REVIEW` for human confirmation.
@@ -127,9 +128,9 @@ Inspect the active analyzed requirement and make the explicit human decision
 with:
 
 ```bash
-uv run agent requirement show
-uv run agent requirement approve
-uv run agent requirement reject "Clarify the expected output"
+uv run wssagent requirement show
+uv run wssagent requirement approve
+uv run wssagent requirement reject "Clarify the expected output"
 ```
 
 Approval records the decision and advances the Session to `DESIGN`. Rejection
@@ -148,7 +149,7 @@ orchestration uses the currently selected Provider configuration. After
 explicitly approving a requirement, generate the active Session design with:
 
 ```bash
-uv run agent design
+uv run wssagent design
 ```
 
 Detected TypeScript projects with a supported root `tsconfig` marker use the
@@ -175,9 +176,9 @@ configuration, state, or model output fails without advancing the Session.
 Inspect and make the explicit human design decision with:
 
 ```bash
-uv run agent design show
-uv run agent design approve
-uv run agent design reject "Clarify the component boundary"
+uv run wssagent design show
+uv run wssagent design approve
+uv run wssagent design reject "Clarify the component boundary"
 ```
 
 Approval records the decision and enters `TASK_BREAKDOWN`. Rejection requires a
@@ -195,7 +196,7 @@ errors. After explicitly approving the design, generate tasks for the active
 Session through the currently configured Provider with:
 
 ```bash
-uv run agent tasks
+uv run wssagent tasks
 ```
 
 The command requires `TASK_BREAKDOWN` state and both stored human approvals. A
@@ -205,9 +206,9 @@ configuration, state, or model output fails without advancing the Session.
 Inspect and make the explicit human task decision with:
 
 ```bash
-uv run agent tasks show
-uv run agent tasks approve
-uv run agent tasks reject "Split the CLI task"
+uv run wssagent tasks show
+uv run wssagent tasks approve
+uv run wssagent tasks reject "Split the CLI task"
 ```
 
 Approval records the decision and enters `TEST_GENERATION`. Rejection requires a
@@ -228,7 +229,7 @@ exchange cleanup, and safe errors. Generate the active Session plan through the
 currently selected Provider with:
 
 ```bash
-uv run agent tests
+uv run wssagent tests
 ```
 
 Detected Angular projects use the dedicated `v2-angular` test Prompt and strict
@@ -260,7 +261,7 @@ Codex adapters require the result to match the current test ID and its planned
 relative path. Continue the active IMPLEMENTATION Session with:
 
 ```bash
-uv run agent continue
+uv run wssagent continue
 ```
 
 On the first invocation for a cycle, the command resumes or starts exactly one
@@ -272,7 +273,7 @@ Codex runs from a project-external temporary directory so read-only tool access
 cannot inspect `.agent` or future tests. The resulting file ID, relative path,
 and SHA-256 digest are recorded while the cycle remains in `WRITE_TEST`.
 
-On the second invocation, `agent continue` verifies the recorded digest and
+On the second invocation, `wssagent continue` verifies the recorded digest and
 executes exactly that current test from the project root. The shell-free runner
 uses the separately configured positive finite `test_command_timeout_seconds`.
 It records RED only for a positive non-zero exit whose output identifies the
@@ -286,7 +287,7 @@ are length-bounded. A successful RED transition reports, for example:
 RED confirmed: feature-1 (TC1, exit 1)
 ```
 
-On the third invocation, `agent continue` builds the Blind development context
+On the third invocation, `wssagent continue` builds the Blind development context
 from that digest-bound current test, visible production source, and sanitized
 RED stderr/stdout (mapped to compile/test output). The selected Provider must
 return the complete content of exactly one minimal production file. Strict JSON
@@ -311,7 +312,7 @@ advances only RED to IMPLEMENT:
 Production source ready for GREEN: feature-1 (TC1 -> src/export.ts)
 ```
 
-On the fourth invocation, `agent continue` revalidates both recorded source
+On the fourth invocation, `wssagent continue` revalidates both recorded source
 digests, runs the exact current test first, and runs the complete suite only
 after that test passes. The suite uses its own required positive finite
 `full_test_suite_timeout_seconds`. Maven and Gradle run their unfiltered test
@@ -332,7 +333,7 @@ sources, and concurrent state updates preserve IMPLEMENT. GREEN verification
 is deterministic, invokes no model, and never treats production-source writing
 alone as proof that tests pass.
 
-On the next invocation after GREEN, `agent continue` checks the ordered plan.
+On the next invocation after GREEN, `wssagent continue` checks the ordered plan.
 If another dependency-ready test remains, it clears all prior-cycle evidence
 and starts exactly that test through the same isolated WRITE_TEST generation
 path. If the completed prefix exhausts the plan, it revalidates both final
@@ -351,7 +352,7 @@ only the digest-bound final test and production source through the selected
 Provider:
 
 ```bash
-uv run agent review semantic
+uv run wssagent review semantic
 ```
 
 The versioned semantic Prompt and strict JSON/Codex adapters classify concrete
@@ -372,7 +373,7 @@ semantic step retain the compatible invariant-only path.
 Run the deterministic implementation audit after the optional semantic review:
 
 ```bash
-uv run agent review
+uv run wssagent review
 ```
 
 The command verifies the digest-bound completion snapshot against the retained
@@ -388,11 +389,11 @@ Finish with either automated source refactoring or the compatible no-source
 verification path:
 
 ```bash
-uv run agent refactor automated
-uv run agent refactor
+uv run wssagent refactor automated
+uv run wssagent refactor
 ```
 
-`agent refactor automated` requires the approved semantic-review path. Through
+`wssagent refactor automated` requires the approved semantic-review path. Through
 the selected JSON/Codex Provider it exposes only the versioned Prompt, approved
 source-free report, completion/review digests, and exact final production file.
 The result must be a changed same-path complete source. It is written with a
@@ -401,7 +402,7 @@ gates run. Both must pass before DONE; either failure restores the captured
 source and REFACTOR state. Codex uses a project-external ephemeral read-only
 exchange, and provider errors never include source or review payloads.
 
-Plain `agent refactor` retains the v0.1 no-source-change behavior and invokes no
+Plain `wssagent refactor` retains the v0.1 no-source-change behavior and invokes no
 model. Both paths revalidate the complete review, completion, GREEN-evidence,
 and final-source audit chain around the two test processes, store only sanitized
 bounded final evidence, and enter DONE atomically. Unbound source changes,
@@ -415,7 +416,7 @@ configured Angular project invalidates the audit chain.
 Workflow model and test calls produce privacy-safe active-Session telemetry:
 
 ```bash
-uv run agent metrics
+uv run wssagent metrics
 ```
 
 The CLI decorates the existing injected runners, so adapters and workflow logic
@@ -433,8 +434,8 @@ Quality projection and durable failure memory build on that telemetry without
 storing private content:
 
 ```bash
-uv run agent metrics quality
-uv run agent failures
+uv run wssagent metrics quality
+uv run wssagent failures
 ```
 
 Quality metrics reuse the validated test-plan parser and trusted completed-test
@@ -456,9 +457,9 @@ files, and GitHub workflows are high risk. Medium/high changes remain pending
 until an explicit human decision:
 
 ```bash
-uv run agent approval status
-uv run agent approval approve
-uv run agent approval reject "Needs a migration plan"
+uv run wssagent approval status
+uv run wssagent approval approve
+uv run wssagent approval reject "Needs a migration plan"
 ```
 
 The strict active-Session record binds the decision to the exact SHA-256 change
@@ -469,10 +470,10 @@ After one implementation cycle reaches verified GREEN, optionally prepare and
 commit only its current test and production artifacts:
 
 ```bash
-uv run agent git prepare
-uv run agent approval status
-uv run agent approval approve
-uv run agent git commit
+uv run wssagent git prepare
+uv run wssagent approval status
+uv run wssagent approval approve
+uv run wssagent git commit
 ```
 
 Preparation runs a scoped, NUL-delimited Git status and creates the risk request
@@ -483,20 +484,20 @@ the same paths. It never uses `git add .`; unrelated staged/worktree changes are
 left out. Git stdout/stderr is not persisted or returned. The verified HEAD and
 approval digest are returned, while the source-free approval record is archived
 inside the Session for audit. This opt-in sequence can run after every GREEN
-cycle before the next `agent continue` without changing legacy workflows.
+cycle before the next `wssagent continue` without changing legacy workflows.
 
 Immediately after that scoped Agent commit, undo only the same current GREEN
 cycle and return it to `WRITE_TEST` with:
 
 ```bash
-uv run agent rollback
+uv run wssagent rollback
 ```
 
 Rollback requires the active GREEN artifacts to be unchanged and clean, and
 the single-parent Git HEAD subject/path set to match that exact Session and
 test. It restores only the two validated paths from HEAD's parent with native
 `git restore`, leaves HEAD and unrelated work unchanged, removes stale
-current-cycle evidence, and lets the normal `agent continue` loop retry the
+current-cycle evidence, and lets the normal `wssagent continue` loop retry the
 test. It cannot target arbitrary revisions, older cycles, or completed
 Sessions; malformed, mismatched, dirty, or concurrently changed inputs fail
 closed. If the atomic state update fails after file restoration, the same
@@ -523,7 +524,7 @@ Inspect the exact implemented target ecosystem matrix without executing a build
 or creating project metadata:
 
 ```bash
-uv run agent ecosystem list
+uv run wssagent ecosystem list
 ```
 
 The documented scope is Java with Maven/Gradle/JUnit 5 and TypeScript with
@@ -537,19 +538,33 @@ compatible JSON stdin/stdout command. Every command token must be a JSON string.
 Inspect adapter-ready and planned Agent providers without executing them:
 
 ```bash
-uv run agent provider list
-uv run agent provider status
-uv run agent provider doctor
-uv run agent provider doctor codex
+uv run wssagent provider list
+uv run wssagent provider status
+uv run wssagent provider doctor
+uv run wssagent provider doctor codex
 ```
 
 Select an implemented Provider explicitly:
 
 ```bash
-uv run agent provider use codex
-uv run agent provider use claude-code
-uv run agent provider use cursor
+uv run wssagent provider use codex
+uv run wssagent provider use claude-code
+uv run wssagent provider use cursor
 ```
+
+The default Provider is used for every model operation unless a source-writing
+role overrides it. Select and inspect those overrides with:
+
+```bash
+uv run wssagent provider use claude-code --for test-source
+uv run wssagent provider use codex --for production-source
+uv run wssagent provider status --for test-source
+uv run wssagent provider status --for production-source
+```
+
+`test-source` writes planned test files; `production-source` writes the Blind
+implementation after RED. Test execution itself still uses the detected local
+project test command. An unconfigured role falls back to the default Provider.
 
 When an adapter-ready CLI is missing in an interactive terminal, `provider use`
 asks before downloading anything. The default is always No. Confirmation
@@ -583,7 +598,7 @@ External plugins and IDE clients can discover the versioned integration
 contract without initializing or mutating a project:
 
 ```bash
-uv run agent integration manifest
+uv run wssagent integration manifest
 ```
 
 The plugin API is the existing explicit `json-command` external-process
@@ -608,7 +623,7 @@ the Agent's shell-free planners.
 Real Linux Mint validation is deliberately separate and manual. Register a
 self-hosted GitHub Actions runner with the labels `self-hosted`, `linux`, `x64`,
 and `linuxmint`, then dispatch the **Linux Mint validation** workflow. The job
-requires `agent platform doctor` to report the exact Linux Mint distribution,
+requires `wssagent platform doctor` to report the exact Linux Mint distribution,
 the `supported-target` classification, and `ready` status before running all
 quality gates. No host packages are installed by that workflow. Until a matching
 runner completes it successfully, Linux Mint remains a supported target with
@@ -617,7 +632,7 @@ pending real-host CI evidence.
 Inspect host identity and minimum runtime readiness without changing the project:
 
 ```bash
-uv run agent platform doctor
+uv run wssagent platform doctor
 ```
 
 On Linux, the Doctor follows the standard

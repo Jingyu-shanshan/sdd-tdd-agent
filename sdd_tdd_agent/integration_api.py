@@ -43,9 +43,9 @@ def build_integration_manifest() -> Dict[str, object]:
         "ide_api": {
             "execution": "cli-process",
             "commands": {
-                "project_memory": ["agent", "memory"],
-                "provider_status": ["agent", "provider", "status"],
-                "status": ["agent", "status"],
+                "project_memory": ["wssagent", "memory"],
+                "provider_status": ["wssagent", "provider", "status"],
+                "status": ["wssagent", "status"],
             },
             "exit_codes": {"success": 0, "error": 2},
         },

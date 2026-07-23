@@ -66,7 +66,7 @@ def test_should_require_a_manual_real_linux_mint_runner() -> None:
     assert "schedule:" not in workflow
     assert "permissions:\n  contents: read" in workflow
     assert "runs-on: [self-hosted, linux, x64, linuxmint]" in workflow
-    assert "uv run agent platform doctor" in workflow
+    assert "uv run wssagent platform doctor" in workflow
     assert "Distribution: linuxmint" in workflow
     assert "Platform support: supported-target" in workflow
     assert "Readiness: ready" in workflow

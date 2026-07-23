@@ -628,9 +628,12 @@ def main(
         output.write(render_provider_list(list_providers()))
         return 0
 
-    if arguments == ["provider", "status"]:
+    if arguments == ["provider", "status"] or (
+        len(arguments) == 4 and arguments[0:3] == ["provider", "status", "--for"]
+    ):
         try:
-            selection = load_provider_selection(project_root)
+            role = arguments[3] if len(arguments) == 4 else None
+            selection = load_provider_selection(project_root, role)
         except ValueError as error:
             error_output.write(f"Error: {error}\n")
             return 2
@@ -661,8 +664,11 @@ def main(
         output.write(render_provider_diagnostic(diagnostic))
         return 0
 
-    if len(arguments) == 3 and arguments[0:2] == ["provider", "use"]:
+    if len(arguments) in {3, 5} and arguments[0:2] == ["provider", "use"]:
         try:
+            if len(arguments) == 5 and arguments[3] != "--for":
+                raise ValueError("Expected --for before provider role")
+            role = arguments[4] if len(arguments) == 5 else None
             dependencies = provider_dependencies or ProviderCommandDependencies(
                 input=sys.stdin,
                 runner=runner or SubprocessRunner(),
@@ -673,6 +679,7 @@ def main(
                 arguments[2],
                 dependencies,
                 output,
+                role,
             )
         except (ValueError, ProviderInstallError, RequirementAnalyzerError) as error:
             error_output.write(f"Error: {error}\n")
@@ -687,7 +694,8 @@ def main(
         if result.selection is None:
             error_output.write("Error: Provider selection did not complete\n")
             return 2
-        output.write(f"Selected provider: {result.selection.provider_key}\n")
+        role_text = f" for {role}" if role else ""
+        output.write(f"Selected provider{role_text}: {result.selection.provider_key}\n")
         return 0
 
     if arguments == ["platform", "doctor"]:

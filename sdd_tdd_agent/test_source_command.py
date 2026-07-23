@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, Optional
 
-from sdd_tdd_agent.analyze_command import ActiveSessionError, load_analyzer_config
+from sdd_tdd_agent.analyze_command import ActiveSessionError
 from sdd_tdd_agent.model_adapter import (
     CodexCommandResolver,
     CommandAnalyzerConfig,
@@ -11,6 +11,7 @@ from sdd_tdd_agent.model_adapter import (
     structured_cli_runner,
 )
 from sdd_tdd_agent.project_status import load_project_status
+from sdd_tdd_agent.provider_registry import load_provider_config
 from sdd_tdd_agent.red_execution import record_test_source_artifact
 from sdd_tdd_agent.tdd_cycle import prepare_write_test_cycle
 from sdd_tdd_agent.test_source_adapter import (
@@ -72,7 +73,7 @@ def generate_active_test_source(
     status = load_project_status(root)
     if status.current_session is None:
         raise ActiveSessionError("Project has no active Session")
-    config = load_analyzer_config(root)
+    config = load_provider_config(root, "test-source")
     prepared = prepare_write_test_cycle(root, status.current_session)
     collector = source_collector or WorkspaceSourceCollector()
     sources = collector.collect(root, prepared.test_case.test_file)

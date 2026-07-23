@@ -9,7 +9,7 @@ description = "A single-agent SDD and incremental TDD development CLI"
 requires-python = ">=3.9"
 
 [project.scripts]
-agent = "sdd_tdd_agent.cli:main"
+wssagent = "sdd_tdd_agent.cli:main"
 
 [tool.setuptools.package-data]
 sdd_tdd_agent = ["prompts/**/*.md"]

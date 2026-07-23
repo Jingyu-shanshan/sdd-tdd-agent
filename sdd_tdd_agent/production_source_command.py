@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, Dict, Optional
 
-from sdd_tdd_agent.analyze_command import ActiveSessionError, load_analyzer_config
+from sdd_tdd_agent.analyze_command import ActiveSessionError
 from sdd_tdd_agent.model_adapter import (
     CodexCommandResolver,
     CommandAnalyzerConfig,
@@ -31,6 +31,7 @@ from sdd_tdd_agent.production_source_workspace import (
     WorkspaceProductionSourceCollector,
 )
 from sdd_tdd_agent.project_status import load_project_status
+from sdd_tdd_agent.provider_registry import load_provider_config
 from sdd_tdd_agent.red_execution import (
     RedExecutionError,
     validate_current_test_source_artifact,
@@ -168,7 +169,7 @@ def generate_active_production_source(
     if status.current_session is None:
         raise ActiveSessionError("Project has no active Session")
     session_id = status.current_session
-    config = load_analyzer_config(root)
+    config = load_provider_config(root, "production-source")
     state_path, initial_raw, initial_state = _state(root, session_id)
     _ensure_state_update_available(state_path)
     cycle = initial_state.get("current_cycle")
