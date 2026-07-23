@@ -8,6 +8,8 @@ and validate the core workflow; it is not the only planned ecosystem.
 - Project initialization and status.
 - Maven and Gradle project detection.
 - JUnit 5 detection and incremental test execution.
+- Read-only discovery of explicitly configured Maven/Gradle quality plugins and
+  Node quality scripts for fresh project metadata.
 - Feature and bug Sessions with shared safe creation, activation, and downstream
   workflow compatibility.
 - Explicit human requirement review with approve/reject transitions.
@@ -164,6 +166,11 @@ and validate the core workflow; it is not the only planned ecosystem.
   revalidates artifact/change digests, stages and commits only the exact current
   test/production paths, preserves unrelated staged changes, verifies HEAD, and
   archives source-free approval evidence. It never runs `git add .` or pushes.
+- Public `agent rollback` safely restores only the immediately current GREEN
+  Agent commit's exact test/production paths from its single parent, preserves
+  history and unrelated work, and atomically returns the cycle to `WRITE_TEST`.
+  Dirty paths, arbitrary/older revisions, mismatched commits, and concurrency
+  fail closed.
 
 ## v1.0: Model and ecosystem extensibility
 

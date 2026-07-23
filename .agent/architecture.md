@@ -13,9 +13,9 @@ machine, context isolation, and incremental TDD loop.
 The platform starts as a single Python package with a thin CLI boundary. The
 `project_init` module owns workspace filesystem changes independently of CLI
 dispatch. The side-effect-free `project_detection` module maps root-level
-project markers and Maven dependency metadata to an immutable project profile.
-New workflow behavior will be introduced behind application-layer interfaces
-only when a failing acceptance test requires it.
+project markers plus exact test-framework and quality-tool configuration to an
+immutable project profile. New workflow behavior will be introduced behind
+application-layer interfaces only when a failing acceptance test requires it.
 
 ## Decisions
 
@@ -27,6 +27,11 @@ only when a failing acceptance test requires it.
 - Keep project detection read-only and separate from metadata persistence.
 - Parse valid Maven POM files with the standard library and match XML local
   names so standard namespace versions do not leak into domain rules.
+- Discover quality tools only from exact configuration evidence: Maven plugin
+  coordinates (including Maven's standard default plugin group), anchored
+  Gradle plugin declarations, or a Node dependency paired with an exact script
+  command token. Preserve canonical output order and never install or execute a
+  discovered tool during project initialization.
 - Keep project/session status loading and deterministic text rendering outside
   CLI dispatch. Validate session identifiers before resolving state paths.
 - Create feature sessions exclusively with immutable typed results, pending SDD
@@ -274,6 +279,13 @@ only when a failing acceptance test requires it.
   for those same paths and verify HEAD. Never stage the project root or include
   unrelated staged changes. Archive only the source-free approval record by
   digest after success; do not expose or persist Git process output.
+- Roll back only the active current GREEN cycle whose exact Agent commit is
+  HEAD. Require clean validated artifact paths, a matching subject/path set,
+  and one verified parent; restore only those paths from the parent with native
+  shell-free `git restore` while preserving history and unrelated work. Then
+  atomically remove current-cycle artifacts/evidence and return the same test
+  to `WRITE_TEST`. If state replacement fails, restore the paths from HEAD;
+  reject arbitrary revisions, older cycles, dirty paths, and concurrent state.
 - Treat the existing tracked `project.yml`, `architecture.md`, and
   `conventions.md` as the sole cross-Session project-memory snapshot. Load them
   through one typed standard-library boundary that rejects unsafe, empty,

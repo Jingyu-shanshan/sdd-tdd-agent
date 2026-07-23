@@ -48,6 +48,7 @@ from sdd_tdd_agent.git_integration import (
     SystemGitCommandRunner,
     commit_active_green_cycle,
     prepare_active_green_commit,
+    rollback_active_green_cycle,
 )
 from sdd_tdd_agent.implementation_command import continue_active_implementation
 from sdd_tdd_agent.implementation_review import (
@@ -270,6 +271,21 @@ def main(
         output.write(
             f"Git commit complete: {committed.session_id} "
             f"({committed.test_id}; {committed.commit_sha})\n"
+        )
+        return 0
+
+    if arguments == ["rollback"]:
+        try:
+            rolled_back = rollback_active_green_cycle(
+                project_root,
+                git_runner or SystemGitCommandRunner(),
+            )
+        except GitIntegrationError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(
+            f"Rollback ready for retry: {rolled_back.session_id} "
+            f"({rolled_back.test_id}; WRITE_TEST)\n"
         )
         return 0
 

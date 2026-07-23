@@ -4,6 +4,20 @@ A CLI platform for software-design-driven development (SDD) and incremental
 test-driven development (TDD), built around a single agent with isolated
 contexts.
 
+## Installation
+
+Python 3.9 or newer is required. Install the pinned 0.1.0 release with `uv`:
+
+```bash
+uv tool install https://github.com/Jingyu-shanshan/sdd-tdd-agent/releases/download/v0.1.0/sdd_tdd_agent-0.1.0-py3-none-any.whl
+agent platform doctor
+agent hello
+```
+
+Linux Mint users should require `Readiness: ready` from the Doctor before
+starting a workflow. Project toolchains and the selected Agent Provider CLI
+remain explicit host prerequisites.
+
 ## Current capabilities
 
 The current v0.1 core provides a working public CLI from project/session setup
@@ -35,7 +49,10 @@ metadata. Fresh workspaces also record Java/Maven projects detected by
 also record JUnit 5 as their test framework. Root TypeScript projects are
 detected from strict `package.json` metadata plus an explicit `packageManager`
 or one consistent lockfile; configured Jest, Vitest, and Angular test scripts
-are reported without guessing a package manager or framework.
+are reported without guessing a package manager or framework. Fresh metadata
+also records configured Maven or Gradle Checkstyle, SpotBugs, and PMD tools,
+plus Node ESLint and Prettier tools when both dependency and script evidence is
+present. Discovery is read-only and never installs or runs those tools.
 
 The tracked `project.yml`, `architecture.md`, and `conventions.md` files are the
 canonical cross-Session project memory. Inspect its validated snapshot identity
@@ -207,9 +224,8 @@ paths. Valid output writes deterministic `test-plan.md` and enters
 `IMPLEMENTATION`; it does not write or run test code. Strict provider-neutral
 JSON command and Codex exec adapters implement this generator boundary with an
 exact nested case Schema, ephemeral read-only execution, private temporary
-exchange cleanup, and safe errors. CLI orchestration remains deferred to the
-next increment. Generate the active Session plan through the currently selected
-Provider with:
+exchange cleanup, and safe errors. Generate the active Session plan through the
+currently selected Provider with:
 
 ```bash
 uv run agent tests
@@ -468,6 +484,23 @@ left out. Git stdout/stderr is not persisted or returned. The verified HEAD and
 approval digest are returned, while the source-free approval record is archived
 inside the Session for audit. This opt-in sequence can run after every GREEN
 cycle before the next `agent continue` without changing legacy workflows.
+
+Immediately after that scoped Agent commit, undo only the same current GREEN
+cycle and return it to `WRITE_TEST` with:
+
+```bash
+uv run agent rollback
+```
+
+Rollback requires the active GREEN artifacts to be unchanged and clean, and
+the single-parent Git HEAD subject/path set to match that exact Session and
+test. It restores only the two validated paths from HEAD's parent with native
+`git restore`, leaves HEAD and unrelated work unchanged, removes stale
+current-cycle evidence, and lets the normal `agent continue` loop retry the
+test. It cannot target arbitrary revisions, older cycles, or completed
+Sessions; malformed, mismatched, dirty, or concurrently changed inputs fail
+closed. If the atomic state update fails after file restoration, the same
+paths are restored from HEAD before the error is returned.
 
 The complete public-CLI sequence is covered by an isolated end-to-end
 acceptance test using a fresh detected TypeScript/Vitest project. It verifies

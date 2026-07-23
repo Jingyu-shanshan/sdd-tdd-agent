@@ -40,6 +40,9 @@ def _render_project_metadata(root: Path, profile: Optional[ProjectProfile]) -> s
         metadata += "".join(
             f"  - {framework}\n" for framework in profile.test_frameworks
         )
+    if profile.quality_tools:
+        metadata += "quality_tools:\n"
+        metadata += "".join(f"  - {tool}\n" for tool in profile.quality_tools)
     return metadata
 
 

@@ -1,8 +1,9 @@
+import json
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Tuple
+from typing import Dict, Protocol, Tuple
 
 from sdd_tdd_agent.change_approval import (
     ChangeApproval,
@@ -105,6 +106,16 @@ class GreenGitCommit:
     test_id: str
     paths: Tuple[str, ...]
     change_digest: str
+    commit_sha: str
+
+
+@dataclass(frozen=True)
+class GreenGitRollback:
+    """One current GREEN cycle restored from its exact Agent commit."""
+
+    session_id: str
+    test_id: str
+    paths: Tuple[str, ...]
     commit_sha: str
 
 
@@ -345,5 +356,179 @@ def commit_active_green_cycle(
         context.test_id,
         context.paths,
         approval.change_digest,
+        head,
+    )
+
+
+def _rollback_metadata(output: str, context: _GreenContext) -> Tuple[str, str]:
+    if not output.endswith("\n") or "\n" in output[:-1]:
+        raise GitIntegrationError("Git rollback metadata is invalid")
+    fields = output[:-1].split("\0")
+    if len(fields) != 3 or COMMIT_PATTERN.fullmatch(fields[0]) is None:
+        raise GitIntegrationError("Git rollback metadata is invalid")
+    head, parents, subject = fields
+    parent_items = parents.split()
+    if len(parent_items) != 1 or COMMIT_PATTERN.fullmatch(parent_items[0]) is None:
+        raise GitIntegrationError("Git rollback requires a single parent")
+    if subject != f"feat: {context.session_id} {context.test_id}":
+        raise GitIntegrationError(
+            "Git rollback HEAD does not match current GREEN cycle"
+        )
+    return head, parent_items[0]
+
+
+def _rollback_paths(output: str, expected: Tuple[str, ...]) -> None:
+    if not output.endswith("\0"):
+        raise GitIntegrationError("Git rollback paths are invalid")
+    paths = tuple(item for item in output[:-1].split("\0") if item)
+    if len(paths) != len(set(paths)) or set(paths) != set(expected):
+        raise GitIntegrationError("Git rollback paths do not match GREEN artifacts")
+
+
+def _restore_command(source: str, paths: Tuple[str, ...]) -> Tuple[str, ...]:
+    return ("git", "restore", f"--source={source}", "--worktree", "--", *paths)
+
+
+def _rolled_back_state(context: _GreenContext) -> str:
+    try:
+        state = json.loads(context.raw_state)
+    except json.JSONDecodeError as error:
+        raise GitIntegrationError("Session state is invalid") from error
+    if not isinstance(state, dict):
+        raise GitIntegrationError("Session state is invalid")
+    typed_state: Dict[str, object] = state
+    progress = typed_state.get("tdd_cycle")
+    if not isinstance(progress, dict):
+        raise GitIntegrationError("TDD cycle progress is invalid")
+    completed = progress.get("completed_tests")
+    if (
+        progress.get("current_test") != context.test_id
+        or progress.get("phase") != "GREEN"
+        or not isinstance(completed, list)
+        or not completed
+        or completed[-1] != context.test_id
+    ):
+        raise GitIntegrationError("TDD cycle progress is invalid")
+    progress["phase"] = "WRITE_TEST"
+    completed.pop()
+    for field in (
+        "test_source",
+        "red_evidence",
+        "production_source",
+        "green_evidence",
+        "verification_failure",
+    ):
+        typed_state.pop(field, None)
+    return f"{json.dumps(typed_state, indent=2)}\n"
+
+
+def _rollback_temporary(context: _GreenContext) -> Path:
+    return context.state_path.with_name(".state.json.git-rollback.tmp")
+
+
+def _write_rollback_state(context: _GreenContext, serialized: str) -> None:
+    temporary = _rollback_temporary(context)
+    created = False
+    try:
+        with temporary.open("x", encoding="utf-8") as stream:
+            created = True
+            stream.write(serialized)
+    except FileExistsError as error:
+        raise GitIntegrationError(
+            "Git rollback state update is already in progress"
+        ) from error
+    except OSError as error:
+        raise GitIntegrationError("Git rollback state update failed") from error
+    try:
+        if context.state_path.read_text(encoding="utf-8") != context.raw_state:
+            raise GitIntegrationError("Session state changed concurrently")
+        temporary.replace(context.state_path)
+    except GitIntegrationError:
+        raise
+    except (OSError, UnicodeError) as error:
+        raise GitIntegrationError("Git rollback state update failed") from error
+    finally:
+        if created and temporary.exists():
+            try:
+                temporary.unlink()
+            except OSError as error:
+                raise GitIntegrationError("Git rollback state update failed") from error
+
+
+def _validated_rollback_commit(
+    root: Path,
+    context: _GreenContext,
+    runner: GitCommandRunner,
+) -> Tuple[str, str]:
+    status = _run_step(
+        runner,
+        _status_command(context.paths),
+        root,
+        "Git rollback status failed",
+    )
+    if status.stdout:
+        raise GitIntegrationError("Git rollback target paths must be clean")
+    metadata = _run_step(
+        runner,
+        ("git", "show", "-s", "--format=%H%x00%P%x00%s", "HEAD"),
+        root,
+        "Git rollback metadata failed",
+    )
+    head, parent = _rollback_metadata(metadata.stdout, context)
+    paths = _run_step(
+        runner,
+        (
+            "git",
+            "diff-tree",
+            "--no-commit-id",
+            "--name-only",
+            "-z",
+            "-r",
+            "HEAD",
+        ),
+        root,
+        "Git rollback path verification failed",
+    )
+    _rollback_paths(paths.stdout, context.paths)
+    _same_context(root, context)
+    return head, parent
+
+
+def rollback_active_green_cycle(
+    root: Path,
+    runner: GitCommandRunner,
+) -> GreenGitRollback:
+    """Restore the exact current GREEN Agent commit for a safe TDD retry."""
+    context = _read_context(root)
+    temporary = _rollback_temporary(context)
+    if temporary.exists() or temporary.is_symlink():
+        raise GitIntegrationError("Git rollback state update is already in progress")
+    head, parent = _validated_rollback_commit(root, context, runner)
+    serialized = _rolled_back_state(context)
+    _run_step(
+        runner,
+        _restore_command(parent, context.paths),
+        root,
+        "Git rollback restore failed",
+    )
+    try:
+        _write_rollback_state(context, serialized)
+    except GitIntegrationError:
+        try:
+            _run_step(
+                runner,
+                _restore_command(head, context.paths),
+                root,
+                "Git rollback recovery failed",
+            )
+        except GitIntegrationError as recovery_error:
+            raise GitIntegrationError(
+                "Git rollback recovery failed"
+            ) from recovery_error
+        raise
+    return GreenGitRollback(
+        context.session_id,
+        context.test_id,
+        context.paths,
         head,
     )
