@@ -2,6 +2,10 @@ import sys
 from pathlib import Path
 from typing import Optional, Sequence, TextIO
 
+from sdd_tdd_agent.analyze_command import (
+    analyze_active_requirement,
+    load_analyzer_config,
+)
 from sdd_tdd_agent.change_approval import (
     ChangeApprovalError,
     approve_active_change,
@@ -9,10 +13,7 @@ from sdd_tdd_agent.change_approval import (
     reject_active_change,
     render_change_approval,
 )
-from sdd_tdd_agent.analyze_command import (
-    analyze_active_requirement,
-    load_analyzer_config,
-)
+from sdd_tdd_agent.cli_help import COMMAND_HELP, render_command_error, render_help
 from sdd_tdd_agent.automated_refactor import (
     AutomatedRefactorError,
     CodexExecAutomatedRefactorGenerator,
@@ -155,7 +156,25 @@ def main(
     error_output = sys.stderr if err is None else err
     project_root = Path.cwd() if root is None else root
 
-    if arguments and arguments[0] == "hello":
+    if not arguments or arguments in (["--help"], ["-h"], ["help"]):
+        output.write(render_help())
+        return 0
+
+    if arguments[0] == "help":
+        if len(arguments) == 2 and arguments[1] in COMMAND_HELP:
+            output.write(render_help(arguments[1]))
+            return 0
+        error_output.write(render_command_error((arguments[1],)))
+        return 2
+
+    if arguments[-1] in {"--help", "-h"}:
+        if arguments[0] in COMMAND_HELP:
+            output.write(render_help(arguments[0]))
+            return 0
+        error_output.write(render_command_error((arguments[0],)))
+        return 2
+
+    if arguments == ["hello"]:
         hello(output)
         return 0
 
@@ -168,12 +187,12 @@ def main(
         output.write(render_ecosystems(list_ecosystems()))
         return 0
 
-    if arguments and arguments[0] == "init":
+    if arguments == ["init"]:
         initialize_project(project_root)
         output.write("Initialized .agent workspace.\n")
         return 0
 
-    if arguments and arguments[0] == "status":
+    if arguments == ["status"]:
         status = load_project_status(project_root)
         output.write(render_project_status(status))
         return 0
@@ -406,7 +425,7 @@ def main(
         )
         return 0
 
-    if arguments and arguments[0] == "analyze":
+    if arguments == ["analyze"]:
         process_runner = observe_process_runner(
             project_root,
             "requirement_analysis",
@@ -707,4 +726,14 @@ def main(
         output.write(render_platform_diagnostic(diagnostic))
         return 0
 
+    error_output.write(render_command_error(tuple(arguments)))
     return 2
+
+
+def cli_entrypoint() -> int:
+    """Run the installed CLI with safe user-facing boundary errors."""
+    try:
+        return main()
+    except (OSError, ValueError) as error:
+        sys.stderr.write(f"Error: {error}\n")
+        return 2

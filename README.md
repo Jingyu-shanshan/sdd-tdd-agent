@@ -19,6 +19,20 @@ Linux Mint users should require `Readiness: ready` from the Doctor before
 starting a workflow. Project toolchains and the selected Agent Provider CLI
 remain explicit host prerequisites.
 
+Discover available commands and command-specific queries with:
+
+```bash
+wssagent --help
+wssagent help provider
+wssagent provider --help
+wssagent provider list
+```
+
+Running `wssagent` without arguments also shows the global help. Unknown
+commands suggest a close supported command when possible, while invalid
+arguments point to the relevant command help. Expected user and configuration
+errors are reported without a Python traceback.
+
 ## Current capabilities
 
 The current v0.2 core provides a working public CLI from project/session setup

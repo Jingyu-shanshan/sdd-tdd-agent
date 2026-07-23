@@ -1,4 +1,4 @@
-from sdd_tdd_agent.cli import main
+from sdd_tdd_agent.cli import cli_entrypoint
 
 
-raise SystemExit(main())
+raise SystemExit(cli_entrypoint())
