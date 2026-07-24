@@ -7,6 +7,10 @@ CommandHelp = Tuple[str, CommandUsages]
 
 COMMAND_HELP: Dict[str, CommandHelp] = {
     "hello": ("Verify that the CLI starts.", (("wssagent hello", "Print greeting."),)),
+    "update": (
+        "Update wssagent from its GitHub repository.",
+        (("wssagent update", "Install the latest version in place."),),
+    ),
     "init": ("Initialize the .agent workspace.", (("wssagent init", "Initialize."),)),
     "status": (
         "Show project and Session status.",

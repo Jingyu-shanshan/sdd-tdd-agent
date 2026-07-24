@@ -94,6 +94,11 @@ from sdd_tdd_agent.requirement_review import (
 )
 from sdd_tdd_agent.semantic_review import SemanticReviewError
 from sdd_tdd_agent.semantic_review_command import run_active_semantic_review
+from sdd_tdd_agent.self_update import (
+    SelfUpdateError,
+    update_application,
+    write_update_notice,
+)
 from sdd_tdd_agent.task_command import generate_active_tasks
 from sdd_tdd_agent.telemetry import (
     TelemetryError,
@@ -176,6 +181,15 @@ def main(
 
     if arguments == ["hello"]:
         hello(output)
+        return 0
+
+    if arguments == ["update"]:
+        try:
+            update_application(runner or SubprocessRunner())
+        except SelfUpdateError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write("wssagent updated successfully.\n")
         return 0
 
     if arguments == ["integration", "manifest"]:
@@ -732,6 +746,8 @@ def main(
 
 def cli_entrypoint() -> int:
     """Run the installed CLI with safe user-facing boundary errors."""
+    if sys.stderr.isatty() and sys.argv[1:] != ["update"]:
+        write_update_notice(sys.stderr)
     try:
         return main()
     except (OSError, ValueError) as error:

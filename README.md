@@ -33,9 +33,22 @@ commands suggest a close supported command when possible, while invalid
 arguments point to the relevant command help. Expected user and configuration
 errors are reported without a Python traceback.
 
+Update an installed copy in place without uninstalling it first:
+
+```bash
+wssagent update
+```
+
+The command replaces the existing `uv` tool directly from this repository's
+trusted Git source. Interactive terminal use checks the public project version
+at most once every 24 hours and prints a yellow `wssagent update` reminder when
+a newer version exists. The latest-version cache follows `XDG_CACHE_HOME`, or
+defaults to `~/.cache/wssagent`; failed checks never block the requested
+command. Non-interactive scripts and CI do not perform the check.
+
 ## Current capabilities
 
-The current v0.2 core provides a working public CLI from project/session setup
+The current v0.3 core provides a working public CLI from project/session setup
 through requirement, design, task, and test-plan approval gates; isolated
 incremental TDD implementation; deterministic review; final verification; and
 DONE. Model and target-process boundaries remain typed, injected, and testable.
