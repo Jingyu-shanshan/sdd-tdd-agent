@@ -6,6 +6,8 @@ from typing import Callable, Literal, Optional, Protocol, Sequence, Tuple
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.input import Input
+from prompt_toolkit.output import Output
 from prompt_toolkit.shortcuts import radiolist_dialog
 
 from sdd_tdd_agent.chat_adapter import (
@@ -16,6 +18,8 @@ from sdd_tdd_agent.chat_adapter import (
     JsonCommandConversationAgent,
 )
 from sdd_tdd_agent.chat_session import ChatSession, ChatSessionStore
+from sdd_tdd_agent.clipboard import Clipboard, SystemClipboard
+from sdd_tdd_agent.composer import PasteStore, WorkspaceCompleter, composer_bindings
 from sdd_tdd_agent.model_adapter import (
     RequirementAnalyzerError,
     SubprocessRunner,
@@ -35,6 +39,9 @@ from sdd_tdd_agent.provider_tools import (
     ProviderInstallError,
     use_provider,
 )
+from sdd_tdd_agent.red_execution import sanitize_public_text
+from sdd_tdd_agent.skill_catalog import LoadedSkill, SkillCatalog
+from sdd_tdd_agent.workspace_attachments import WorkspaceAttachments
 
 
 PROMPT_VERSION = "v1"
@@ -112,10 +119,25 @@ class Terminal(Protocol):
 class PromptToolkitTerminal:
     """Production terminal built on prompt_toolkit and normal scrollback."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        input: Optional[Input] = None,
+        output: Optional[Output] = None,
+    ) -> None:
+        self._root: Optional[Path] = None
+        self._completer: Optional[WorkspaceCompleter] = None
+        self._pastes = PasteStore()
         self._session: PromptSession[str] = PromptSession(
             history=InMemoryHistory(),
+            key_bindings=composer_bindings(self._pastes),
+            input=input,
+            output=output,
         )
+
+    def configure(self, root: Path) -> None:
+        """Bind completion and sanitization to one explicit project root."""
+        self._root = root.resolve()
+        self._completer = WorkspaceCompleter(root)
 
     def write(self, value: str) -> None:
         """Write to the ordinary terminal scroll region."""
@@ -147,10 +169,22 @@ class PromptToolkitTerminal:
     def prompt(self, message: str) -> Optional[str]:
         """Read one editable line while preserving terminal scrollback."""
         try:
-            return self._session.prompt(message)
+            value = self._session.prompt(
+                message,
+                completer=self._completer,
+                complete_while_typing=True,
+                enable_history_search=True,
+            )
+            expanded = self._pastes.expand(value)
+            return (
+                sanitize_public_text(self._root, expanded)
+                if self._root is not None
+                else expanded
+            )
         except EOFError:
             return None
         except KeyboardInterrupt:
+            self._pastes.expand("")
             self.write("^C\n")
             return ""
 
@@ -164,23 +198,31 @@ class PromptToolkitInteractiveShell:
         agent: Optional[ConversationAgent] = None,
         command_executor: Optional[Callable[[Sequence[str]], CommandResult]] = None,
         provider_dependencies: Optional[ProviderCommandDependencies] = None,
+        clipboard: Optional[Clipboard] = None,
     ) -> None:
         self._terminal = terminal or PromptToolkitTerminal()
         self._agent = agent
         self._command_executor = command_executor
         self._provider_dependencies = provider_dependencies
+        self._clipboard = clipboard or SystemClipboard()
+        self._skills: Optional[SkillCatalog] = None
+        self._active_skill: Optional[LoadedSkill] = None
 
     def run(self, root: Path, launch: InteractiveLaunch) -> int:
         """Initialize, configure, and run one private local chat session."""
         initialize_project(root)
+        if isinstance(self._terminal, PromptToolkitTerminal):
+            self._terminal.configure(root)
         if not self._configure_providers(root):
             return 2
         store = ChatSessionStore(root)
+        self._skills = SkillCatalog(root)
         try:
             session = self._open_session(store, launch)
         except ValueError as error:
             self._terminal.write(f"Error: {error}\n")
             return 2
+        self._restore_skill(session)
         self._show_banner(root, session)
         agent = self._agent or _default_agent(root)
         if launch.initial_prompt:
@@ -291,10 +333,25 @@ class PromptToolkitInteractiveShell:
         agent: ConversationAgent,
         value: str,
     ) -> None:
+        value = sanitize_public_text(root, value)
         store.append_message(session.session_id, "user", value)
         current = store.load(session.session_id)
         try:
             status = load_project_status(root)
+            workspace = WorkspaceAttachments(root)
+            attachments = workspace.capture_from_text(value)
+            for attachment in attachments:
+                workspace.verify(attachment)
+            if attachments:
+                summary = ", ".join(
+                    f"{attachment.path} ({attachment.size} bytes)"
+                    for attachment in attachments
+                )
+                store.append_message(
+                    session.session_id,
+                    "event",
+                    f"Attachments sent: {summary}.",
+                )
             reply = agent.respond(
                 ConversationRequest(
                     PROMPT_VERSION,
@@ -302,11 +359,15 @@ class PromptToolkitInteractiveShell:
                     value,
                     current.messages[:-1],
                     status.session_state,
+                    attachments,
+                    self._active_skill,
                 )
             )
             store.append_message(session.session_id, "assistant", reply.message)
             self._terminal.write(f"Agent > {reply.message}\n")
             self._execute_action(root, store, session, reply, value)
+        except KeyboardInterrupt:
+            self._terminal.write("Execution cancelled.\n")
         except (OSError, ValueError, RequirementAnalyzerError) as error:
             self._terminal.write(f"Error: {error}\n")
 
@@ -339,6 +400,10 @@ class PromptToolkitInteractiveShell:
         command, _, argument = value.strip().partition(" ")
         if command == "/help":
             self._terminal.write(_interactive_help())
+        elif command == "/copy":
+            self._copy(session)
+        elif command == "/skills":
+            self._choose_skill(store, session)
         elif command == "/status":
             self._execute(root, store, session, ("status",))
         elif command in {"/feature", "/bug"}:
@@ -373,10 +438,82 @@ class PromptToolkitInteractiveShell:
         elif command == "/exit":
             return True, session
         else:
-            self._terminal.write(
-                f"Error: Unknown interactive command '{command}'. Run /help.\n"
-            )
+            skill_name = command.removeprefix("/")
+            if not self._activate_skill(store, session, skill_name):
+                self._terminal.write(
+                    f"Error: Unknown interactive command '{command}'. Run /help.\n"
+                )
         return False, session
+
+    def _copy(self, session: ChatSession) -> None:
+        reply = next(
+            (
+                message.content
+                for message in reversed(session.messages)
+                if message.role == "assistant"
+            ),
+            None,
+        )
+        if reply is None:
+            raise ValueError("No Agent reply is available to copy")
+        self._clipboard.copy(reply)
+        self._terminal.write("Copied the latest Agent reply.\n")
+
+    def _choose_skill(
+        self,
+        store: ChatSessionStore,
+        session: ChatSession,
+    ) -> None:
+        if self._skills is None:
+            raise ValueError("Skill catalog is unavailable")
+        summaries = self._skills.list()
+        if not summaries:
+            raise ValueError("No Skills are available")
+        options = tuple(
+            MenuOption(
+                summary.name,
+                f"{summary.name} — {summary.description}",
+                True,
+            )
+            for summary in summaries
+        )
+        selected = self._terminal.choose("Select a Skill", options)
+        if selected is not None and not self._activate_skill(store, session, selected):
+            raise ValueError(f"Skill could not be loaded: {selected}")
+
+    def _activate_skill(
+        self,
+        store: ChatSessionStore,
+        session: ChatSession,
+        name: str,
+    ) -> bool:
+        if self._skills is None:
+            return False
+        try:
+            self._active_skill = self._skills.load(name)
+        except ValueError:
+            return False
+        store.append_message(
+            session.session_id,
+            "event",
+            f"Skill activated: {name}",
+        )
+        self._terminal.write(f"Skill activated: {name}.\n")
+        return True
+
+    def _restore_skill(self, session: ChatSession) -> None:
+        if self._skills is None:
+            return
+        prefix = "Skill activated: "
+        for message in reversed(session.messages):
+            if message.role != "event" or not message.content.startswith(prefix):
+                continue
+            name = message.content[len(prefix) :]
+            try:
+                self._active_skill = self._skills.load(name)
+            except ValueError:
+                self._terminal.write(f"Skill could not be restored: {name}.\n")
+            return
 
     def _run_to_gate(
         self,
@@ -406,7 +543,16 @@ class PromptToolkitInteractiveShell:
         executor = self._command_executor or (
             lambda command: _default_execute(root, command)
         )
-        result = executor(arguments)
+        try:
+            result = executor(arguments)
+        except KeyboardInterrupt:
+            self._terminal.write("Execution cancelled.\n")
+            store.append_message(
+                session.session_id,
+                "event",
+                "Workflow command cancelled.",
+            )
+            return False
         visible = result.stdout if result.exit_code == 0 else result.stderr
         if visible:
             self._terminal.write(visible)
@@ -537,6 +683,9 @@ def _interactive_help() -> str:
         "  /continue               Advance the current workflow\n"
         "  /approve                Approve the current review\n"
         "  /reject <reason>         Reject the current review\n"
+        "  /copy                    Copy the latest Agent reply\n"
+        "  /skills                  Select a project or user Skill\n"
+        "  /skill-name              Activate a Skill by name\n"
         "  /status                  Show project status\n"
         "  /new                     Start a new chat\n"
         "  /resume [id|name]        Resume a chat\n"

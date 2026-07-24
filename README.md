@@ -47,10 +47,15 @@ wssagent "Start a feature for PDF export"
 ```
 
 The interactive commands are `/feature`, `/bug`, `/continue`, `/approve`,
-`/reject`, `/status`, `/new`, `/resume`, `/rename`, `/help`, and `/exit`.
-Provider replies may request only validated SDD/TDD actions; ordinary chat does
-not mutate the project. Provider private reasoning and raw command output are
-not stored in chat history.
+`/reject`, `/status`, `/new`, `/resume`, `/rename`, `/copy`, `/skills`,
+`/help`, and `/exit`. The composer supports history, Shift+Enter or a trailing
+backslash for multiline input, and folded long pastes. Type `@` for bounded
+project-file completion; attached UTF-8 content is verified immediately before
+sending and only its summary is persisted. `/skills` discovers project and
+user `SKILL.md` files, with project Skills taking precedence. Provider replies
+may request only validated SDD/TDD actions; ordinary chat does not mutate the
+project. Provider private reasoning, attachment bodies, and raw command output
+are not stored in chat history.
 
 Update an installed copy in place without uninstalling it first:
 

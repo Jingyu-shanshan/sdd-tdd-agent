@@ -352,8 +352,8 @@ def _remove_control_characters(value: str) -> str:
     )
 
 
-def sanitize_test_evidence(root: Path, value: str) -> str:
-    """Remove sensitive and unsafe content from one persisted test stream."""
+def sanitize_public_text(root: Path, value: str) -> str:
+    """Remove sensitive and unsafe content without truncating public text."""
     sanitized = ANSI_PATTERN.sub("", value)
     sanitized = _remove_control_characters(sanitized)
     resolved = str(root.resolve())
@@ -361,7 +361,12 @@ def sanitize_test_evidence(root: Path, value: str) -> str:
     sanitized = AUTHORIZATION_PATTERN.sub("Authorization: <REDACTED>", sanitized)
     sanitized = BEARER_PATTERN.sub("Bearer <REDACTED>", sanitized)
     sanitized = SECRET_PATTERN.sub(r"\1\2<REDACTED>", sanitized)
-    return sanitized[:MAX_EVIDENCE_STREAM_CHARACTERS]
+    return sanitized
+
+
+def sanitize_test_evidence(root: Path, value: str) -> str:
+    """Remove sensitive and unsafe content from one persisted test stream."""
+    return sanitize_public_text(root, value)[:MAX_EVIDENCE_STREAM_CHARACTERS]
 
 
 def execute_current_test_for_red(

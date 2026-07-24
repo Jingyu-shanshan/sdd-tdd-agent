@@ -15,6 +15,7 @@ from sdd_tdd_agent.model_adapter import (
     ProcessResult,
     RequirementAnalyzerError,
 )
+from sdd_tdd_agent.workspace_attachments import WorkspaceAttachments
 
 
 class RecordingRunner:
@@ -104,3 +105,33 @@ def test_should_use_ephemeral_read_only_codex_conversation(tmp_path: Path) -> No
     assert runner.command[0:2] == ("codex", "exec")
     assert "--ephemeral" in runner.command
     assert runner.command[runner.command.index("--sandbox") + 1] == "read-only"
+
+
+def test_should_send_attachment_content_only_in_typed_provider_request(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "app.py"
+    path.write_text("answer = 42\n", encoding="utf-8")
+    attachment = WorkspaceAttachments(tmp_path).capture("app.py")
+    request = _request()
+    request = ConversationRequest(
+        request.prompt_version,
+        request.prompt,
+        request.user_message,
+        request.history,
+        request.workflow_state,
+        attachments=(attachment,),
+    )
+    runner = RecordingRunner(
+        {"message": "Read app.py.", "action": None, "argument": None}
+    )
+
+    JsonCommandConversationAgent(
+        CommandAnalyzerConfig(("bridge",), 30),
+        runner,
+    ).respond(request)
+
+    assert runner.stdin is not None
+    payload = json.loads(runner.stdin)
+    assert payload["attachments"][0]["path"] == "app.py"
+    assert payload["attachments"][0]["content"] == "answer = 42\n"

@@ -12,6 +12,8 @@ from sdd_tdd_agent.model_adapter import (
     RequirementAnalyzerError,
     SystemCodexCommandResolver,
 )
+from sdd_tdd_agent.skill_catalog import LoadedSkill
+from sdd_tdd_agent.workspace_attachments import AttachmentSnapshot
 
 
 CONVERSATION_ACTIONS = {
@@ -48,6 +50,8 @@ class ConversationRequest:
     user_message: str
     history: Tuple[ChatMessage, ...]
     workflow_state: Optional[str]
+    attachments: Tuple[AttachmentSnapshot, ...] = ()
+    skill: Optional[LoadedSkill] = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +81,23 @@ def _request_payload(request: ConversationRequest) -> Dict[str, object]:
             for message in request.history
         ],
         "workflow_state": request.workflow_state,
+        "attachments": [
+            {
+                "path": attachment.path,
+                "content": attachment.content,
+                "sha256": attachment.sha256,
+            }
+            for attachment in request.attachments
+        ],
+        "skill": (
+            None
+            if request.skill is None
+            else {
+                "name": request.skill.name,
+                "content": request.skill.content,
+                "source": request.skill.source,
+            }
+        ),
     }
 
 
