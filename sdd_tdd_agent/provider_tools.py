@@ -4,7 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Protocol, TextIO, Tuple
 
-from sdd_tdd_agent.model_adapter import ProcessRunner
+from sdd_tdd_agent.model_adapter import (
+    ProcessResult,
+    ProcessRunner,
+    RequirementAnalyzerError,
+)
 from sdd_tdd_agent.provider_registry import (
     ProviderInstallPlan,
     ProviderSelection,
@@ -50,6 +54,7 @@ class ProviderDiagnostic:
     adapter_status: str
     cli_status: str
     version: Optional[str]
+    detail: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -71,6 +76,12 @@ class ProviderUseResult:
     selection: Optional[ProviderSelection]
     installed_version: Optional[str]
     cancelled: bool
+
+
+PI_MINIMUM_NODE_VERSION = (22, 19, 0)
+PI_MINIMUM_NODE_VERSION_TEXT = ".".join(
+    str(component) for component in PI_MINIMUM_NODE_VERSION
+)
 
 
 class ProviderDoctor:
@@ -123,6 +134,7 @@ class ProviderDoctor:
                 provider.status,
                 "unhealthy",
                 None,
+                self._runtime_detail(provider.key, result),
             )
         return ProviderDiagnostic(
             provider.key,
@@ -130,6 +142,46 @@ class ProviderDoctor:
             "installed",
             version,
         )
+
+    def _runtime_detail(
+        self,
+        provider_key: str,
+        result: ProcessResult,
+    ) -> Optional[str]:
+        if provider_key != "pi":
+            return None
+        output = f"{result.stdout}\n{result.stderr}"
+        node = self._locator.locate("node")
+        detected = self._node_version(node) if node is not None else None
+        if detected is not None and detected[0] < PI_MINIMUM_NODE_VERSION:
+            return (
+                f"Pi requires Node.js >= {PI_MINIMUM_NODE_VERSION_TEXT}; "
+                f"detected {detected[1]}. Upgrade Node.js, then reinstall "
+                "or update Pi."
+            )
+        if is_pi_esm_failure(output):
+            return (
+                "Pi failed in the Node.js ESM loader. "
+                f"Pi requires Node.js >= {PI_MINIMUM_NODE_VERSION_TEXT}. "
+                "Upgrade Node.js, then reinstall or update Pi."
+            )
+        return None
+
+    def _node_version(
+        self,
+        executable: str,
+    ) -> Optional[Tuple[Tuple[int, int, int], str]]:
+        try:
+            result = self._runner.run(
+                (executable, "--version"),
+                "",
+                self._timeout_seconds,
+            )
+        except RequirementAnalyzerError:
+            return None
+        label = _safe_version(result.stdout)
+        parsed = _parse_node_version(label) if result.returncode == 0 else None
+        return (parsed, label) if parsed is not None and label is not None else None
 
 
 def _safe_version(stdout: str) -> Optional[str]:
@@ -144,6 +196,23 @@ def _safe_version(stdout: str) -> Optional[str]:
     return lines[0]
 
 
+def _parse_node_version(value: Optional[str]) -> Optional[Tuple[int, int, int]]:
+    if value is None:
+        return None
+    parts = value.removeprefix("v").split(".")
+    if len(parts) < 3 or any(not part.isdigit() for part in parts[:3]):
+        return None
+    return (int(parts[0]), int(parts[1]), int(parts[2]))
+
+
+def is_pi_esm_failure(value: str) -> bool:
+    """Return whether bounded Provider output identifies Pi's Node ESM loader."""
+    lowered = value.casefold()
+    return "esmloader.moduleprovider" in lowered or (
+        "node:internal/modules/esm/" in lowered and "loader" in lowered
+    )
+
+
 def render_provider_diagnostic(diagnostic: ProviderDiagnostic) -> str:
     """Render deterministic provider health without process details."""
     output = (
@@ -153,6 +222,8 @@ def render_provider_diagnostic(diagnostic: ProviderDiagnostic) -> str:
     )
     if diagnostic.version is not None:
         output += f"Version: {diagnostic.version}\n"
+    if diagnostic.detail is not None:
+        output += f"Detail: {diagnostic.detail}\n"
     return output
 
 

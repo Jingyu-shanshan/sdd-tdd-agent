@@ -11,6 +11,10 @@ from sdd_tdd_agent.model_adapter import (
 )
 from sdd_tdd_agent.streaming_process import StreamingProcessRunner
 from sdd_tdd_agent.red_execution import sanitize_public_text
+from sdd_tdd_agent.provider_tools import (
+    PI_MINIMUM_NODE_VERSION_TEXT,
+    is_pi_esm_failure,
+)
 
 
 EVENT_KINDS = {
@@ -482,6 +486,12 @@ def _provider_failure(
     )
     lowered = sanitized.casefold()
     doctor = f"Run 'wssagent provider doctor {provider_key}' after fixing it."
+    if protocol == "pi-exec" and is_pi_esm_failure(sanitized):
+        return (
+            f"Pi could not start with the active Node.js runtime (exit {returncode}). "
+            f"Pi requires Node.js >= {PI_MINIMUM_NODE_VERSION_TEXT}. "
+            f"Upgrade Node.js, then reinstall or update Pi. {doctor}"
+        )
     if any(
         marker in lowered
         for marker in (

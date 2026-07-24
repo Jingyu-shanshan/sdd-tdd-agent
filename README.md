@@ -665,7 +665,10 @@ Pi uses official print mode with sessions, tools, context files, extensions,
 skills, prompt templates, and project-local configuration disabled. The adapter
 accepts only one bounded JSON object from stdout and uses the official
 [Pi Coding Agent installer](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/README.md).
-Authentication remains explicit through Pi's own API-key or `/login` flow.
+Current Pi releases require Node.js 22.19.0 or newer. `provider doctor pi`
+reports the detected incompatible Node runtime instead of exposing an ESM
+loader stack trace. Authentication remains explicit through Pi's own API-key or
+`/login` flow.
 
 GitHub Copilot remains planned until its JSONL programmatic event stream has a
 dedicated bounded contract. Every workflow run continues to use exactly one

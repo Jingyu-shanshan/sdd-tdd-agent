@@ -37,7 +37,7 @@ class UpdateRunner:
 
 
 def test_should_parse_project_version_and_render_yellow_update_notice() -> None:
-    assert installed_version() == "0.5.0"
+    assert installed_version() == "0.5.1"
     latest = parse_project_version(
         '[build-system]\nrequires = []\n\n[project]\nversion = "0.3.0"\n'
     )
