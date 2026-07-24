@@ -21,10 +21,17 @@ from sdd_tdd_agent.chat_session import ChatSession, ChatSessionStore
 from sdd_tdd_agent.clipboard import Clipboard, SystemClipboard
 from sdd_tdd_agent.composer import PasteStore, WorkspaceCompleter, composer_bindings
 from sdd_tdd_agent.model_adapter import (
+    CommandAnalyzerConfig,
+    ProcessRunner,
     RequirementAnalyzerError,
     SubprocessRunner,
     SystemCodexCommandResolver,
     structured_cli_runner,
+)
+from sdd_tdd_agent.provider_streaming import (
+    ProviderEvent,
+    ProviderStreamingRunner,
+    render_provider_event,
 )
 from sdd_tdd_agent.project_init import initialize_project
 from sdd_tdd_agent.project_status import load_project_status
@@ -32,6 +39,7 @@ from sdd_tdd_agent.provider_registry import (
     ProviderDefinition,
     list_providers,
     load_primary_provider_config,
+    load_provider_config,
     load_provider_roles_status,
 )
 from sdd_tdd_agent.provider_tools import (
@@ -41,6 +49,8 @@ from sdd_tdd_agent.provider_tools import (
 )
 from sdd_tdd_agent.red_execution import sanitize_public_text
 from sdd_tdd_agent.skill_catalog import LoadedSkill, SkillCatalog
+from sdd_tdd_agent.streaming_process import SystemStreamingProcessRunner
+from sdd_tdd_agent.tdd_cycle import load_current_tdd_phase
 from sdd_tdd_agent.workspace_attachments import WorkspaceAttachments
 
 
@@ -207,6 +217,7 @@ class PromptToolkitInteractiveShell:
         self._clipboard = clipboard or SystemClipboard()
         self._skills: Optional[SkillCatalog] = None
         self._active_skill: Optional[LoadedSkill] = None
+        self._verbose = False
 
     def run(self, root: Path, launch: InteractiveLaunch) -> int:
         """Initialize, configure, and run one private local chat session."""
@@ -224,7 +235,7 @@ class PromptToolkitInteractiveShell:
             return 2
         self._restore_skill(session)
         self._show_banner(root, session)
-        agent = self._agent or _default_agent(root)
+        agent = self._agent or _default_agent(root, self._provider_runner(root))
         if launch.initial_prompt:
             self._chat(root, store, session, agent, launch.initial_prompt)
             session = store.load(session.session_id)
@@ -404,6 +415,10 @@ class PromptToolkitInteractiveShell:
             self._copy(session)
         elif command == "/skills":
             self._choose_skill(store, session)
+        elif command == "/verbose":
+            self._verbose = not self._verbose
+            state = "on" if self._verbose else "off"
+            self._terminal.write(f"Verbose Provider events: {state}.\n")
         elif command == "/status":
             self._execute(root, store, session, ("status",))
         elif command in {"/feature", "/bug"}:
@@ -417,9 +432,13 @@ class PromptToolkitInteractiveShell:
             ):
                 self._run_to_gate(root, store, session)
         elif command == "/continue":
-            arguments = _advance_arguments(root)
-            if self._execute(root, store, session, arguments):
+            state = load_project_status(root).session_state
+            if state in {"REVIEW", "REFACTOR"}:
                 self._run_to_gate(root, store, session)
+            else:
+                arguments = _advance_arguments(root)
+                if self._execute(root, store, session, arguments):
+                    self._run_to_gate(root, store, session)
         elif command in {"/approve", "/reject"}:
             arguments = _review_arguments(root, command[1:], argument)
             if self._execute(root, store, session, arguments):
@@ -521,17 +540,56 @@ class PromptToolkitInteractiveShell:
         store: ChatSessionStore,
         session: ChatSession,
     ) -> None:
-        for _ in range(4):
+        for _ in range(1_000):
             state = load_project_status(root).session_state
-            if state in REVIEW_STATES or state in {
-                "IMPLEMENTATION",
-                "REFACTOR",
-                "DONE",
-            }:
+            if state in REVIEW_STATES or state == "DONE":
+                return
+            if state == "IMPLEMENTATION":
+                if not self._execute(root, store, session, ("continue",)):
+                    return
+                continue
+            if state == "REVIEW":
+                if not self._execute(root, store, session, ("review", "semantic")):
+                    return
+                if not self._execute(root, store, session, ("review",)):
+                    return
+                continue
+            if state == "REFACTOR":
+                self._confirm_refactor(root, store, session)
                 return
             arguments = _automatic_arguments(state)
             if arguments is None or not self._execute(root, store, session, arguments):
                 return
+        raise ValueError("Interactive workflow exceeded its safe step limit")
+
+    def _confirm_refactor(
+        self,
+        root: Path,
+        store: ChatSessionStore,
+        session: ChatSession,
+    ) -> None:
+        selected = self._terminal.choose(
+            "Final refactor confirmation",
+            (
+                MenuOption(
+                    "verify",
+                    "Verify only (recommended)",
+                    True,
+                ),
+                MenuOption(
+                    "automated",
+                    "Apply an automated behavior-preserving refactor",
+                    True,
+                ),
+            ),
+        )
+        if selected is None:
+            self._terminal.write("Final verification deferred.\n")
+            return
+        arguments = (
+            ("refactor", "automated") if selected == "automated" else ("refactor",)
+        )
+        self._execute(root, store, session, arguments)
 
     def _execute(
         self,
@@ -541,7 +599,11 @@ class PromptToolkitInteractiveShell:
         arguments: Sequence[str],
     ) -> bool:
         executor = self._command_executor or (
-            lambda command: _default_execute(root, command)
+            lambda command: _default_execute(
+                root,
+                command,
+                self._provider_runner(root, command),
+            )
         )
         try:
             result = executor(arguments)
@@ -559,6 +621,25 @@ class PromptToolkitInteractiveShell:
         event = f"Workflow command completed ({arguments[0]}; exit {result.exit_code})."
         store.append_message(session.session_id, "event", event)
         return result.exit_code == 0
+
+    def _provider_runner(
+        self,
+        root: Path,
+        arguments: Sequence[str] = (),
+    ) -> ProcessRunner:
+        config = _execution_provider_config(root, arguments)
+        if config.protocol == "json-command":
+            return SubprocessRunner()
+        return ProviderStreamingRunner(
+            config,
+            SystemStreamingProcessRunner(),
+            lambda event: self._render_stream_event(root, event),
+        )
+
+    def _render_stream_event(self, root: Path, event: ProviderEvent) -> None:
+        rendered = render_provider_event(root, event, self._verbose)
+        if rendered:
+            self._terminal.write(rendered)
 
 
 class _TerminalWriter(io.TextIOBase):
@@ -593,9 +674,8 @@ def _provider_option(provider: ProviderDefinition) -> MenuOption:
     )
 
 
-def _default_agent(root: Path) -> ConversationAgent:
+def _default_agent(root: Path, runner: ProcessRunner) -> ConversationAgent:
     config = load_primary_provider_config(root)
-    runner = SubprocessRunner()
     if config.protocol == "codex-exec":
         return CodexExecConversationAgent(config, runner, root)
     return JsonCommandConversationAgent(
@@ -604,12 +684,37 @@ def _default_agent(root: Path) -> ConversationAgent:
     )
 
 
-def _default_execute(root: Path, arguments: Sequence[str]) -> CommandResult:
+def _execution_provider_config(
+    root: Path,
+    arguments: Sequence[str],
+) -> CommandAnalyzerConfig:
+    if tuple(arguments) != ("continue",):
+        return load_primary_provider_config(root)
+    status = load_project_status(root)
+    if status.current_session is None:
+        return load_primary_provider_config(root)
+    phase = load_current_tdd_phase(root, status.current_session)
+    if phase in {None, "WRITE_TEST", "GREEN"}:
+        return load_provider_config(root, "test-source")
+    return load_primary_provider_config(root)
+
+
+def _default_execute(
+    root: Path,
+    arguments: Sequence[str],
+    runner: ProcessRunner,
+) -> CommandResult:
     from sdd_tdd_agent.cli import main
 
     output = io.StringIO()
     errors = io.StringIO()
-    exit_code = main(arguments, out=output, err=errors, root=root)
+    exit_code = main(
+        arguments,
+        out=output,
+        err=errors,
+        root=root,
+        runner=runner,
+    )
     return CommandResult(exit_code, output.getvalue(), errors.getvalue())
 
 
@@ -686,6 +791,7 @@ def _interactive_help() -> str:
         "  /copy                    Copy the latest Agent reply\n"
         "  /skills                  Select a project or user Skill\n"
         "  /skill-name              Activate a Skill by name\n"
+        "  /verbose                 Toggle expanded Provider events\n"
         "  /status                  Show project status\n"
         "  /new                     Start a new chat\n"
         "  /resume [id|name]        Resume a chat\n"

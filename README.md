@@ -48,14 +48,23 @@ wssagent "Start a feature for PDF export"
 
 The interactive commands are `/feature`, `/bug`, `/continue`, `/approve`,
 `/reject`, `/status`, `/new`, `/resume`, `/rename`, `/copy`, `/skills`,
-`/help`, and `/exit`. The composer supports history, Shift+Enter or a trailing
-backslash for multiline input, and folded long pastes. Type `@` for bounded
-project-file completion; attached UTF-8 content is verified immediately before
-sending and only its summary is persisted. `/skills` discovers project and
-user `SKILL.md` files, with project Skills taking precedence. Provider replies
-may request only validated SDD/TDD actions; ordinary chat does not mutate the
-project. Provider private reasoning, attachment bodies, and raw command output
-are not stored in chat history.
+`/verbose`, `/help`, and `/exit`. The composer supports history, Shift+Enter or
+a trailing backslash for multiline input, and folded long pastes. Type `@` for
+bounded project-file completion; attached UTF-8 content is verified immediately
+before sending and only its summary is persisted. `/skills` discovers project
+and user `SKILL.md` files, with project Skills taking precedence. Provider
+replies may request only validated SDD/TDD actions; ordinary chat does not
+mutate the project. Provider private reasoning, attachment bodies, and raw
+command output are not stored in chat history.
+
+Codex, Claude Code, Cursor, and Pi stream normalized public progress and tool
+events in interactive mode. Output is folded by default; `/verbose` toggles
+sanitized public deltas and tool output. Hidden model reasoning is never shown.
+After each approval, the shell advances to the next human review gate. During
+implementation it runs the complete WRITE_TEST, RED, IMPLEMENT, and GREEN
+sequence until review, failure, cancellation, or completion. Final automated
+refactoring remains an explicit confirmation; verification without a source
+change is the recommended default.
 
 Update an installed copy in place without uninstalling it first:
 
@@ -72,7 +81,7 @@ command. Non-interactive scripts and CI do not perform the check.
 
 ## Current capabilities
 
-The current v0.3 core provides a working public CLI from project/session setup
+The current v0.4 core provides a working public CLI from project/session setup
 through requirement, design, task, and test-plan approval gates; isolated
 incremental TDD implementation; deterministic review; final verification; and
 DONE. Model and target-process boundaries remain typed, injected, and testable.

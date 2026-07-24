@@ -26,6 +26,7 @@ INTERACTIVE_COMMANDS = (
     "/resume",
     "/skills",
     "/status",
+    "/verbose",
 )
 
 
