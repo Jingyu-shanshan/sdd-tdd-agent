@@ -33,7 +33,7 @@ EXCLUDED_DIRECTORIES = {
     "node_modules",
     "venv",
 }
-ATTACHMENT_PATTERN = re.compile(r'(?<!\S)@(?:"([^"\r\n]+)"|([^\s]+))')
+ATTACHMENT_PATTERN = re.compile(r'(?<![A-Za-z0-9._%+-])@(?:"([^"\r\n]+)"|([^\s]+))')
 GIT_FILES_COMMAND = (
     "git",
     "ls-files",

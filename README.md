@@ -51,8 +51,9 @@ The interactive commands include `/feature`, `/bug`, `/continue`, `/approve`,
 `/skills`, `/verbose`, `/hotkeys`, `/help`, and `/exit`; familiar `/clear`,
 `/name`, and `/quit` aliases are also supported. The composer supports history,
 Shift+Enter, Ctrl+J, or a trailing backslash for multiline input and folded
-long pastes. Type `@` to open fuzzy, bounded project-file completion; attached
-UTF-8 content is verified immediately before sending and only its summary is
+long pastes. Type `@` at the prompt or directly after CJK text to immediately
+open fuzzy, bounded project-file and directory completion; attached UTF-8
+content is verified immediately before sending and only its summary is
 persisted. `/skills` discovers project and user `SKILL.md` files, with project
 Skills taking precedence. Provider replies may request only validated SDD/TDD
 actions; ordinary chat does not mutate the project. Provider private reasoning,

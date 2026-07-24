@@ -215,8 +215,9 @@ class PromptToolkitTerminal:
                 [("class:prompt", message.replace(" > ", " ❯ "))],
                 completer=self._completer,
                 complete_while_typing=True,
+                complete_in_thread=True,
                 complete_style=CompleteStyle.COLUMN,
-                enable_history_search=True,
+                enable_history_search=False,
                 reserve_space_for_menu=10,
                 bottom_toolbar=self._footer or None,
             )

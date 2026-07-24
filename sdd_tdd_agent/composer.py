@@ -35,7 +35,7 @@ INTERACTIVE_COMMANDS = (
     "/status",
     "/verbose",
 )
-AT_PREFIX_PATTERN = re.compile(r'(?<!\S)@(?:"[^"\r\n]*|[^\s]*)$')
+AT_PREFIX_PATTERN = re.compile(r'(?<![A-Za-z0-9._%+-])@(?:"[^"\r\n]*|[^\s]*)$')
 MAX_COMPLETIONS = 20
 
 
@@ -171,12 +171,6 @@ class PasteStore:
 def composer_bindings(pastes: PasteStore) -> KeyBindings:
     """Build multiline and long-paste bindings for one PromptSession."""
     bindings = KeyBindings()
-
-    @bindings.add("@", eager=True)
-    def _open_files(event: KeyPressEvent) -> None:
-        buffer = event.current_buffer
-        buffer.insert_text("@")
-        buffer.start_completion(select_first=False)
 
     @bindings.add("tab", eager=True)
     def _select_completion(event: KeyPressEvent) -> None:
