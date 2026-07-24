@@ -28,10 +28,29 @@ wssagent provider --help
 wssagent provider list
 ```
 
-Running `wssagent` without arguments also shows the global help. Unknown
-commands suggest a close supported command when possible, while invalid
-arguments point to the relevant command help. Expected user and configuration
-errors are reported without a Python traceback.
+Running `wssagent` without arguments enters the interactive SDD/TDD shell when
+stdin and stdout are terminals; redirected or scripted use still shows global
+help. Unknown commands suggest a close supported command when possible, while
+invalid arguments point to the relevant command help. Expected user and
+configuration errors are reported without a Python traceback.
+
+On first interactive use, `wssagent` initializes `.agent/` idempotently and
+asks for the `code` and `test` Providers. It then opens a private, redacted
+JSONL chat session under `.agent/logs/chat/` and shows the project workflow
+state. Resume the latest or a named session with:
+
+```bash
+wssagent -c
+wssagent --resume
+wssagent --resume <id-or-name>
+wssagent "Start a feature for PDF export"
+```
+
+The interactive commands are `/feature`, `/bug`, `/continue`, `/approve`,
+`/reject`, `/status`, `/new`, `/resume`, `/rename`, `/help`, and `/exit`.
+Provider replies may request only validated SDD/TDD actions; ordinary chat does
+not mutate the project. Provider private reasoning and raw command output are
+not stored in chat history.
 
 Update an installed copy in place without uninstalling it first:
 

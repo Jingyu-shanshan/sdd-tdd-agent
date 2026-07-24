@@ -59,6 +59,7 @@ from sdd_tdd_agent.integration_api import (
     build_integration_manifest,
     render_integration_manifest,
 )
+from sdd_tdd_agent.interactive_shell import InteractiveLaunch, InteractiveShell
 from sdd_tdd_agent.model_adapter import (
     ProcessRunner,
     RequirementAnalyzerError,
@@ -158,6 +159,12 @@ def hello(out: TextIO) -> None:
     out.write("Hello, World!\n")
 
 
+def _default_interactive_shell() -> InteractiveShell:
+    from sdd_tdd_agent.interactive_shell import PromptToolkitInteractiveShell
+
+    return PromptToolkitInteractiveShell()
+
+
 def main(
     argv: Optional[Sequence[str]] = None,
     out: Optional[TextIO] = None,
@@ -167,6 +174,7 @@ def main(
     provider_dependencies: Optional[ProviderCommandDependencies] = None,
     test_runner: Optional[TestCommandRunner] = None,
     git_runner: Optional[GitCommandRunner] = None,
+    interactive_shell: Optional[InteractiveShell] = None,
 ) -> int:
     """Run the command-line interface."""
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -174,7 +182,34 @@ def main(
     error_output = sys.stderr if err is None else err
     project_root = Path.cwd() if root is None else root
 
-    if not arguments or arguments in (["--help"], ["-h"], ["help"]):
+    if not arguments:
+        is_tty = sys.stdin.isatty() and bool(getattr(output, "isatty", lambda: False)())
+        if interactive_shell is not None or is_tty:
+            shell = interactive_shell or _default_interactive_shell()
+            return shell.run(project_root, InteractiveLaunch("new"))
+        output.write(render_help())
+        return 0
+
+    if arguments == ["-c"]:
+        shell = interactive_shell or _default_interactive_shell()
+        return shell.run(project_root, InteractiveLaunch("latest"))
+
+    if arguments[0] == "--resume" and len(arguments) in {1, 2}:
+        shell = interactive_shell or _default_interactive_shell()
+        reference = arguments[1] if len(arguments) == 2 else None
+        return shell.run(
+            project_root,
+            InteractiveLaunch("resume", session_ref=reference),
+        )
+
+    if len(arguments) == 1 and any(character.isspace() for character in arguments[0]):
+        shell = interactive_shell or _default_interactive_shell()
+        return shell.run(
+            project_root,
+            InteractiveLaunch("new", initial_prompt=arguments[0]),
+        )
+
+    if arguments in (["--help"], ["-h"], ["help"]):
         output.write(render_help())
         return 0
 

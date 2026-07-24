@@ -143,6 +143,12 @@ def render_help(topic: Optional[str] = None) -> str:
         lines.extend(
             (
                 "",
+                "Interactive:",
+                "  wssagent",
+                "  wssagent -c",
+                "  wssagent --resume [id|name]",
+                '  wssagent "request"',
+                "",
                 "Common queries:",
                 "  wssagent provider list",
                 "  wssagent provider status",

@@ -16,6 +16,14 @@ from sdd_tdd_agent.provider_registry import (
 )
 
 
+class TextWriter(Protocol):
+    """Minimal output boundary used by Provider prompts."""
+
+    def write(self, value: str, /) -> int:
+        """Write text and return the accepted character count."""
+        ...
+
+
 class ProviderExecutableLocator(Protocol):
     """Typed boundary for locating one provider executable."""
 
@@ -216,7 +224,7 @@ def use_provider(
     root: Path,
     provider_key: str,
     dependencies: ProviderCommandDependencies,
-    output: TextIO,
+    output: TextWriter,
     role: Optional[str] = None,
 ) -> ProviderUseResult:
     """Select a provider, installing a missing CLI only after TTY confirmation."""
