@@ -115,11 +115,10 @@ COMMAND_HELP: Dict[str, CommandHelp] = {
         "List, inspect, diagnose, or select Agent Providers.",
         (
             ("wssagent provider list", "List supported Providers."),
-            ("wssagent provider status [--for <role>]", "Show selection."),
+            ("wssagent provider status [--for test|code]", "Show selection."),
             ("wssagent provider doctor [provider]", "Check Provider CLI."),
             (
-                "wssagent provider use <provider> "
-                "[--for test-source|production-source]",
+                "wssagent provider use <provider> [--for test|code]",
                 "Select Provider.",
             ),
         ),

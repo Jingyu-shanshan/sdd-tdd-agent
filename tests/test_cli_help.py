@@ -65,7 +65,7 @@ def test_should_show_provider_queries_and_selection_help(
     assert output.getvalue().startswith("Usage: wssagent provider <command>")
     assert "wssagent provider list" in output.getvalue()
     assert "wssagent provider doctor [provider]" in output.getvalue()
-    assert "--for test-source|production-source" in output.getvalue()
+    assert "--for test|code" in output.getvalue()
 
 
 def test_should_suggest_close_command_for_typo(tmp_path: Path) -> None:

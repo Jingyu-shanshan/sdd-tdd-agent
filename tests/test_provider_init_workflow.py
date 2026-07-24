@@ -35,7 +35,7 @@ def test_should_explain_that_provider_selection_requires_init(tmp_path: Path) ->
     error_output = io.StringIO()
 
     exit_code = main(
-        ["provider", "use", "claude-code", "--for", "test-source"],
+        ["provider", "use", "claude-code", "--for", "test"],
         err=error_output,
         root=tmp_path,
         provider_dependencies=_dependencies(),
@@ -53,7 +53,7 @@ def test_should_select_role_provider_immediately_after_init(tmp_path: Path) -> N
     initialize_project(tmp_path)
 
     exit_code = main(
-        ["provider", "use", "claude-code", "--for", "test-source"],
+        ["provider", "use", "claude-code", "--for", "test"],
         out=output,
         err=error_output,
         root=tmp_path,
@@ -62,7 +62,7 @@ def test_should_select_role_provider_immediately_after_init(tmp_path: Path) -> N
 
     config = (tmp_path / ".agent" / "config.yml").read_text(encoding="utf-8")
     assert exit_code == 0
-    assert output.getvalue() == "Selected provider for test-source: claude-code\n"
+    assert output.getvalue() == "Selected provider for test: claude-code\n"
     assert error_output.getvalue() == ""
     assert "requirement_analyzer_protocol: codex-exec\n" in config
     assert 'requirement_analyzer_command:\n  - "codex"\n' in config

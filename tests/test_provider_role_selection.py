@@ -68,24 +68,34 @@ def test_should_fall_back_to_default_provider_for_unconfigured_role(
     assert config.command == ("codex",)
 
 
-def test_should_select_role_provider_through_cli(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("role", "provider_key", "config_line"),
+    [
+        ("test", "claude-code", "test_source_provider: claude-code"),
+        ("code", "cursor", "production_source_provider: cursor"),
+    ],
+)
+def test_should_select_role_provider_through_cli(
+    tmp_path: Path,
+    role: str,
+    provider_key: str,
+    config_line: str,
+) -> None:
     config_path = _write_config(tmp_path)
     output = io.StringIO()
     error_output = io.StringIO()
 
     exit_code = main(
-        ["provider", "use", "claude-code", "--for", "test-source"],
+        ["provider", "use", provider_key, "--for", role],
         out=output,
         err=error_output,
         root=tmp_path,
     )
 
     assert exit_code == 0
-    assert output.getvalue() == "Selected provider for test-source: claude-code\n"
+    assert output.getvalue() == f"Selected provider for {role}: {provider_key}\n"
     assert error_output.getvalue() == ""
-    assert "test_source_provider: claude-code" in config_path.read_text(
-        encoding="utf-8"
-    )
+    assert config_line in config_path.read_text(encoding="utf-8")
 
 
 def test_should_report_role_provider_through_cli(tmp_path: Path) -> None:
@@ -94,7 +104,7 @@ def test_should_report_role_provider_through_cli(tmp_path: Path) -> None:
     output = io.StringIO()
 
     exit_code = main(
-        ["provider", "status", "--for", "test-source"],
+        ["provider", "status", "--for", "test"],
         out=output,
         root=tmp_path,
     )

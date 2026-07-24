@@ -139,6 +139,17 @@ from sdd_tdd_agent.provider_tools import (
     use_provider,
 )
 
+PROVIDER_CLI_ROLES = {
+    "test": "test-source",
+    "code": "production-source",
+}
+
+
+def _provider_role(role: Optional[str]) -> Optional[str]:
+    if role is None:
+        return None
+    return PROVIDER_CLI_ROLES.get(role, role)
+
 
 def hello(out: TextIO) -> None:
     """Write the platform greeting to the supplied output stream."""
@@ -665,8 +676,11 @@ def main(
         len(arguments) == 4 and arguments[0:3] == ["provider", "status", "--for"]
     ):
         try:
-            role = arguments[3] if len(arguments) == 4 else None
-            selection = load_provider_selection(project_root, role)
+            requested_role = arguments[3] if len(arguments) == 4 else None
+            selection = load_provider_selection(
+                project_root,
+                _provider_role(requested_role),
+            )
         except ValueError as error:
             error_output.write(f"Error: {error}\n")
             return 2
@@ -701,7 +715,7 @@ def main(
         try:
             if len(arguments) == 5 and arguments[3] != "--for":
                 raise ValueError("Expected --for before provider role")
-            role = arguments[4] if len(arguments) == 5 else None
+            requested_role = arguments[4] if len(arguments) == 5 else None
             dependencies = provider_dependencies or ProviderCommandDependencies(
                 input=sys.stdin,
                 runner=runner or SubprocessRunner(),
@@ -712,7 +726,7 @@ def main(
                 arguments[2],
                 dependencies,
                 output,
-                role,
+                _provider_role(requested_role),
             )
         except (ValueError, ProviderInstallError, RequirementAnalyzerError) as error:
             error_output.write(f"Error: {error}\n")
@@ -727,7 +741,7 @@ def main(
         if result.selection is None:
             error_output.write("Error: Provider selection did not complete\n")
             return 2
-        role_text = f" for {role}" if role else ""
+        role_text = f" for {requested_role}" if requested_role else ""
         output.write(f"Selected provider{role_text}: {result.selection.provider_key}\n")
         return 0
 

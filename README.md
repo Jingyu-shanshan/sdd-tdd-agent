@@ -357,7 +357,7 @@ A trustworthy current-test failure or full-suite regression returns the cycle
 to RED with sanitized bounded retry evidence. Signals, timeouts, startup
 failures, no-test or invalid-option diagnostics, empty failures, changed
 sources, and concurrent state updates preserve IMPLEMENT. GREEN verification
-is deterministic, invokes no model, and never treats production-source writing
+is deterministic, invokes no model, and never treats implementation writing
 alone as proof that tests pass.
 
 On the next invocation after GREEN, `wssagent continue` checks the ordered plan.
@@ -584,17 +584,17 @@ uv run wssagent provider use pi
 Provider selection is project-local and therefore requires an initialized
 `.agent/config.yml` in the current project root.
 
-The default Provider is used for every model operation unless a source-writing
+The default Provider is used for every model operation unless a specialized
 role overrides it. Select and inspect those overrides with:
 
 ```bash
-uv run wssagent provider use claude-code --for test-source
-uv run wssagent provider use codex --for production-source
-uv run wssagent provider status --for test-source
-uv run wssagent provider status --for production-source
+uv run wssagent provider use claude-code --for test
+uv run wssagent provider use codex --for code
+uv run wssagent provider status --for test
+uv run wssagent provider status --for code
 ```
 
-`test-source` writes planned test files; `production-source` writes the Blind
+`test` writes planned test files; `code` writes the Blind
 implementation after RED. Test execution itself still uses the detected local
 project test command. An unconfigured role falls back to the default Provider.
 
