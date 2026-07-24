@@ -3,14 +3,20 @@ from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 from sdd_tdd_agent.chat_adapter import ConversationReply, ConversationRequest
+from sdd_tdd_agent.chat_session import ChatSessionStore
 from sdd_tdd_agent.interactive_shell import (
     CommandResult,
+    INTERRUPT_SENTINEL,
     InteractiveLaunch,
     MenuOption,
     PromptToolkitInteractiveShell,
+    _captures_code_diff,
 )
 from sdd_tdd_agent.model_adapter import ProcessResult
 from sdd_tdd_agent.provider_tools import ProviderCommandDependencies
+from sdd_tdd_agent.project_init import initialize_project
+from sdd_tdd_agent.terminal_theme import InteractiveTheme
+from sdd_tdd_agent.workspace_diff import WorkspaceDiffSnapshot
 
 
 class FakeTerminal:
@@ -67,6 +73,29 @@ class RecordingClipboard:
         self.values.append(value)
 
 
+class FixedDiffCollector:
+    def snapshot(self) -> WorkspaceDiffSnapshot:
+        return WorkspaceDiffSnapshot(
+            (
+                (
+                    "app.py",
+                    "--- a/app.py\n+++ b/app.py\n@@ -1 +1 @@\n-old\n+new\n",
+                ),
+            )
+        )
+
+
+class ChangingDiffCollector:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def snapshot(self) -> WorkspaceDiffSnapshot:
+        self.calls += 1
+        if self.calls == 1:
+            return WorkspaceDiffSnapshot(())
+        return FixedDiffCollector().snapshot()
+
+
 def test_should_initialize_and_select_both_provider_roles(tmp_path: Path) -> None:
     terminal = FakeTerminal(["claude-code", "pi"], ["/exit"])
     commands: List[Tuple[str, ...]] = []
@@ -91,7 +120,9 @@ def test_should_initialize_and_select_both_provider_roles(tmp_path: Path) -> Non
         "Select the code Provider",
         "Select the test Provider",
     ]
-    assert any("🐳" in value for value in terminal.output)
+    banner = "".join(terminal.output)
+    assert "🐳" not in banner
+    assert "████" in banner
     assert commands == []
 
 
@@ -226,6 +257,116 @@ def test_should_cancel_current_command_without_exiting_chat(tmp_path: Path) -> N
 
     assert shell.run(tmp_path, InteractiveLaunch("new")) == 0
     assert "Execution cancelled.\n" in terminal.output
+
+
+def test_should_render_current_diff_with_terminal_theme(tmp_path: Path) -> None:
+    terminal = FakeTerminal(
+        ["codex", "codex"],
+        ["/diff", "/exit"],
+    )
+    shell = PromptToolkitInteractiveShell(
+        terminal=terminal,
+        agent=UnexpectedAgent(),
+        command_executor=lambda arguments: CommandResult(0, "", ""),
+        provider_dependencies=ProviderCommandDependencies(
+            io.StringIO(),
+            UnexpectedRunner(),
+            UnexpectedLocator(),
+        ),
+        theme=InteractiveTheme(enabled=True),
+        diff_collector=FixedDiffCollector(),
+    )
+
+    assert shell.run(tmp_path, InteractiveLaunch("new")) == 0
+
+    output = "".join(terminal.output)
+    assert "\x1b[38;5;203m-old" in output
+    assert "\x1b[38;5;114m+new" in output
+
+
+def test_should_capture_diff_only_for_source_writing_commands() -> None:
+    assert _captures_code_diff(("continue",))
+    assert _captures_code_diff(("refactor", "automated"))
+    assert not _captures_code_diff(("status",))
+    assert not _captures_code_diff(("refactor",))
+
+
+def test_should_support_pi_command_aliases_and_double_ctrl_c(
+    tmp_path: Path,
+) -> None:
+    terminal = FakeTerminal(
+        ["codex", "codex"],
+        ["/name focused", "/hotkeys", INTERRUPT_SENTINEL, INTERRUPT_SENTINEL],
+    )
+    shell = PromptToolkitInteractiveShell(
+        terminal=terminal,
+        agent=UnexpectedAgent(),
+        command_executor=lambda arguments: CommandResult(0, "", ""),
+        provider_dependencies=ProviderCommandDependencies(
+            io.StringIO(),
+            UnexpectedRunner(),
+            UnexpectedLocator(),
+        ),
+    )
+
+    assert shell.run(tmp_path, InteractiveLaunch("new")) == 0
+
+    output = "".join(terminal.output)
+    assert "Chat renamed: focused" in output
+    assert "Ctrl+C" in output
+    assert "Press Ctrl+C again to exit." in output
+
+
+def test_should_show_shortcuts_for_question_mark_without_calling_agent(
+    tmp_path: Path,
+) -> None:
+    terminal = FakeTerminal(
+        ["codex", "codex"],
+        ["?", "/exit"],
+    )
+    shell = PromptToolkitInteractiveShell(
+        terminal=terminal,
+        agent=UnexpectedAgent(),
+        command_executor=lambda arguments: CommandResult(0, "", ""),
+        provider_dependencies=ProviderCommandDependencies(
+            io.StringIO(),
+            UnexpectedRunner(),
+            UnexpectedLocator(),
+        ),
+    )
+
+    assert shell.run(tmp_path, InteractiveLaunch("new")) == 0
+    assert "@                        Open project file search" in "".join(
+        terminal.output
+    )
+
+
+def test_should_show_new_diff_after_source_writing_command(
+    tmp_path: Path,
+) -> None:
+    terminal = FakeTerminal([], [])
+    collector = ChangingDiffCollector()
+    shell = PromptToolkitInteractiveShell(
+        terminal=terminal,
+        agent=UnexpectedAgent(),
+        command_executor=lambda arguments: CommandResult(
+            0,
+            "Test source ready for RED.\n",
+            "",
+        ),
+        theme=InteractiveTheme(enabled=True),
+        diff_collector=collector,
+    )
+    initialize_project(tmp_path)
+    store = ChatSessionStore(tmp_path)
+    session = store.create()
+
+    assert shell._execute(tmp_path, store, session, ("continue",))
+
+    output = "".join(terminal.output)
+    assert "Code changes" in output
+    assert "\x1b[38;5;203m-old" in output
+    assert "\x1b[38;5;114m+new" in output
 
 
 def _record(

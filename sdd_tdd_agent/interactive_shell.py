@@ -1,4 +1,5 @@
 import io
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,7 +9,8 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import Input
 from prompt_toolkit.output import Output
-from prompt_toolkit.shortcuts import radiolist_dialog
+from prompt_toolkit.shortcuts import CompleteStyle, radiolist_dialog
+from prompt_toolkit.styles import Style
 
 from sdd_tdd_agent.chat_adapter import (
     CodexExecConversationAgent,
@@ -51,7 +53,13 @@ from sdd_tdd_agent.red_execution import sanitize_public_text
 from sdd_tdd_agent.skill_catalog import LoadedSkill, SkillCatalog
 from sdd_tdd_agent.streaming_process import SystemStreamingProcessRunner
 from sdd_tdd_agent.tdd_cycle import load_current_tdd_phase
+from sdd_tdd_agent.terminal_theme import InteractiveTheme
 from sdd_tdd_agent.workspace_attachments import WorkspaceAttachments
+from sdd_tdd_agent.workspace_diff import (
+    GitWorkspaceDiff,
+    WorkspaceDiffCollector,
+    WorkspaceDiffSnapshot,
+)
 
 
 PROMPT_VERSION = "v1"
@@ -59,15 +67,28 @@ PROMPT_PATH = (
     Path(__file__).parent / "prompts" / "conversation" / f"{PROMPT_VERSION}.md"
 )
 WHALE_LOGO = """\
-\x1b[36m
           ▄████▄
      ▄████████████▄
   ▄██████████████████▄
- ███████████████▀  ▀███   🐳
+ ███████████████▀  ▀███
   ▀██████████████████▀
      ▀▀████████▀▀
-\x1b[0m"""
+"""
 REVIEW_STATES = {"REQUIREMENT_REVIEW", "DESIGN_REVIEW", "TASK_REVIEW"}
+INTERRUPT_SENTINEL = "\0wssagent-interrupt\0"
+PROMPT_STYLE = Style.from_dict(
+    {
+        "prompt": "#00d7ff bold",
+        "completion-menu": "bg:#20242e #d4d4d4",
+        "completion-menu.completion": "bg:#20242e #d4d4d4",
+        "completion-menu.completion.current": "bg:#3a3a4a #00d7ff bold",
+        "completion-menu.meta.completion": "bg:#20242e #808080",
+        "completion-menu.meta.completion.current": "bg:#3a3a4a #b5bd68",
+        "bottom-toolbar": "bg:#1e1e24 #808080",
+        "scrollbar.background": "bg:#20242e",
+        "scrollbar.button": "bg:#505060",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -137,11 +158,14 @@ class PromptToolkitTerminal:
         self._root: Optional[Path] = None
         self._completer: Optional[WorkspaceCompleter] = None
         self._pastes = PasteStore()
+        self._footer = ""
+        self._color_enabled = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
         self._session: PromptSession[str] = PromptSession(
             history=InMemoryHistory(),
             key_bindings=composer_bindings(self._pastes),
             input=input,
             output=output,
+            style=PROMPT_STYLE if self._color_enabled else None,
         )
 
     def configure(self, root: Path) -> None:
@@ -153,6 +177,14 @@ class PromptToolkitTerminal:
         """Write to the ordinary terminal scroll region."""
         sys.stdout.write(value)
         sys.stdout.flush()
+
+    def supports_color(self) -> bool:
+        """Return whether this terminal should receive ANSI colors."""
+        return self._color_enabled
+
+    def set_footer(self, value: str) -> None:
+        """Set compact context shown below the composer."""
+        self._footer = value
 
     def choose(
         self,
@@ -180,10 +212,13 @@ class PromptToolkitTerminal:
         """Read one editable line while preserving terminal scrollback."""
         try:
             value = self._session.prompt(
-                message,
+                [("class:prompt", message.replace(" > ", " ❯ "))],
                 completer=self._completer,
                 complete_while_typing=True,
+                complete_style=CompleteStyle.COLUMN,
                 enable_history_search=True,
+                reserve_space_for_menu=10,
+                bottom_toolbar=self._footer or None,
             )
             expanded = self._pastes.expand(value)
             return (
@@ -196,7 +231,7 @@ class PromptToolkitTerminal:
         except KeyboardInterrupt:
             self._pastes.expand("")
             self.write("^C\n")
-            return ""
+            return INTERRUPT_SENTINEL
 
 
 class PromptToolkitInteractiveShell:
@@ -209,8 +244,14 @@ class PromptToolkitInteractiveShell:
         command_executor: Optional[Callable[[Sequence[str]], CommandResult]] = None,
         provider_dependencies: Optional[ProviderCommandDependencies] = None,
         clipboard: Optional[Clipboard] = None,
+        theme: Optional[InteractiveTheme] = None,
+        diff_collector: Optional[WorkspaceDiffCollector] = None,
     ) -> None:
         self._terminal = terminal or PromptToolkitTerminal()
+        supports_color = getattr(self._terminal, "supports_color", None)
+        self._theme = theme or InteractiveTheme(
+            enabled=bool(supports_color and supports_color())
+        )
         self._agent = agent
         self._command_executor = command_executor
         self._provider_dependencies = provider_dependencies
@@ -218,10 +259,13 @@ class PromptToolkitInteractiveShell:
         self._skills: Optional[SkillCatalog] = None
         self._active_skill: Optional[LoadedSkill] = None
         self._verbose = False
+        self._diffs = diff_collector
 
     def run(self, root: Path, launch: InteractiveLaunch) -> int:
         """Initialize, configure, and run one private local chat session."""
         initialize_project(root)
+        if self._diffs is None:
+            self._diffs = GitWorkspaceDiff(root)
         if isinstance(self._terminal, PromptToolkitTerminal):
             self._terminal.configure(root)
         if not self._configure_providers(root):
@@ -231,7 +275,7 @@ class PromptToolkitInteractiveShell:
         try:
             session = self._open_session(store, launch)
         except ValueError as error:
-            self._terminal.write(f"Error: {error}\n")
+            self._write_error(str(error))
             return 2
         self._restore_skill(session)
         self._show_banner(root, session)
@@ -239,17 +283,28 @@ class PromptToolkitInteractiveShell:
         if launch.initial_prompt:
             self._chat(root, store, session, agent, launch.initial_prompt)
             session = store.load(session.session_id)
+        interrupt_pending = False
         while True:
             value = self._terminal.prompt("You > ")
             if value is None or value.strip() == "/exit":
                 return 0
+            if value == INTERRUPT_SENTINEL:
+                if interrupt_pending:
+                    return 0
+                interrupt_pending = True
+                self._write_warning("Press Ctrl+C again to exit.")
+                continue
+            interrupt_pending = False
             if not value.strip():
+                continue
+            if value.strip() == "?":
+                self._terminal.write(_hotkeys_help())
                 continue
             if value.lstrip().startswith("/"):
                 try:
                     should_exit, session = self._builtin(root, store, session, value)
                 except ValueError as error:
-                    self._terminal.write(f"Error: {error}\n")
+                    self._write_error(str(error))
                     continue
                 if should_exit:
                     return 0
@@ -267,7 +322,7 @@ class PromptToolkitInteractiveShell:
                 return self._select_provider(root, "test")
             return True
         except (OSError, ValueError, ProviderInstallError) as error:
-            self._terminal.write(f"Error: {error}\n")
+            self._write_error(str(error))
             return False
 
     def _select_provider(self, root: Path, role: str) -> bool:
@@ -277,7 +332,7 @@ class PromptToolkitInteractiveShell:
             options,
         )
         if selected is None:
-            self._terminal.write("Provider selection cancelled.\n")
+            self._write_warning("Provider selection cancelled.")
             return False
         dependencies = self._provider_dependencies or ProviderCommandDependencies(
             sys.stdin,
@@ -292,7 +347,7 @@ class PromptToolkitInteractiveShell:
             "production-source" if role == "code" else "test-source",
         )
         if result.cancelled or result.selection is None:
-            self._terminal.write("Provider selection cancelled.\n")
+            self._write_warning("Provider selection cancelled.")
             return False
         return True
 
@@ -322,19 +377,41 @@ class PromptToolkitInteractiveShell:
     def _show_banner(self, root: Path, session: ChatSession) -> None:
         status = load_project_status(root)
         providers = load_provider_roles_status(root)
-        self._terminal.write(
-            f"{WHALE_LOGO}\n"
-            f"wssagent · {status.project_name}\n"
-            f"Workflow: {status.session_state or 'none'}\n"
-            f"Providers: code={providers.code_provider}; "
-            f"test={providers.test_provider}\n"
-            f"Chat: {session.name}\n"
-            "Type /help for commands.\n"
+        state = status.session_state or "none"
+        state_text = (
+            self._theme.success(state)
+            if state == "DONE"
+            else self._theme.warning(state)
         )
+        self._terminal.write(
+            f"{self._theme.accent(WHALE_LOGO)}\n"
+            f"{self._theme.accent('wssagent')} "
+            f"{self._theme.muted('·')} "
+            f"{self._theme.text(status.project_name)}\n"
+            f"{self._theme.muted('Workflow')}  {state_text}\n"
+            f"{self._theme.muted('Providers')} "
+            f"{self._theme.secondary(f'code {providers.code_provider}')} "
+            f"{self._theme.muted('·')} "
+            f"{self._theme.accent(f'test {providers.test_provider}')}\n"
+            f"{self._theme.muted('Chat')}      "
+            f"{self._theme.text(session.name)}\n"
+            f"{self._theme.muted('Type /help for commands.')}\n"
+        )
+        self._update_footer(root, session)
         for message in session.messages:
             label = "You" if message.role == "user" else "Agent"
             if message.role != "event":
-                self._terminal.write(f"{label} > {message.content}\n")
+                body = (
+                    self._theme.markdown(message.content)
+                    if message.role == "assistant"
+                    else self._theme.text(message.content)
+                )
+                color = (
+                    self._theme.accent
+                    if message.role == "user"
+                    else self._theme.secondary
+                )
+                self._terminal.write(f"{color(label)} │ {body}\n")
 
     def _chat(
         self,
@@ -375,12 +452,15 @@ class PromptToolkitInteractiveShell:
                 )
             )
             store.append_message(session.session_id, "assistant", reply.message)
-            self._terminal.write(f"Agent > {reply.message}\n")
+            self._terminal.write(
+                f"{self._theme.secondary('Agent')} │ "
+                f"{self._theme.markdown(reply.message)}\n"
+            )
             self._execute_action(root, store, session, reply, value)
         except KeyboardInterrupt:
-            self._terminal.write("Execution cancelled.\n")
+            self._write_warning("Execution cancelled.")
         except (OSError, ValueError, RequirementAnalyzerError) as error:
-            self._terminal.write(f"Error: {error}\n")
+            self._write_error(str(error))
 
     def _execute_action(
         self,
@@ -411,19 +491,26 @@ class PromptToolkitInteractiveShell:
         command, _, argument = value.strip().partition(" ")
         if command == "/help":
             self._terminal.write(_interactive_help())
+        elif command == "/hotkeys":
+            self._terminal.write(_hotkeys_help())
         elif command == "/copy":
             self._copy(session)
+        elif command == "/diff":
+            self._show_current_diff()
         elif command == "/skills":
             self._choose_skill(store, session)
         elif command == "/verbose":
             self._verbose = not self._verbose
             state = "on" if self._verbose else "off"
-            self._terminal.write(f"Verbose Provider events: {state}.\n")
+            self._terminal.write(
+                f"{self._theme.muted('Verbose Provider events')} "
+                f"{self._theme.accent(state)}.\n"
+            )
         elif command == "/status":
             self._execute(root, store, session, ("status",))
         elif command in {"/feature", "/bug"}:
             if not argument.strip():
-                self._terminal.write("Error: A description is required.\n")
+                self._write_error("A description is required.")
             elif self._execute(
                 root,
                 store,
@@ -443,7 +530,7 @@ class PromptToolkitInteractiveShell:
             arguments = _review_arguments(root, command[1:], argument)
             if self._execute(root, store, session, arguments):
                 self._run_to_gate(root, store, session)
-        elif command == "/new":
+        elif command in {"/new", "/clear"}:
             session = store.create()
             self._terminal.write(f"New chat: {session.session_id}\n")
         elif command == "/resume":
@@ -451,16 +538,17 @@ class PromptToolkitInteractiveShell:
             if reference is not None:
                 session = store.load(reference)
                 self._show_banner(root, session)
-        elif command == "/rename":
+        elif command in {"/rename", "/name"}:
             session = store.rename(session.session_id, argument)
             self._terminal.write(f"Chat renamed: {session.name}\n")
-        elif command == "/exit":
+            self._update_footer(root, session)
+        elif command in {"/exit", "/quit"}:
             return True, session
         else:
             skill_name = command.removeprefix("/")
             if not self._activate_skill(store, session, skill_name):
-                self._terminal.write(
-                    f"Error: Unknown interactive command '{command}'. Run /help.\n"
+                self._write_error(
+                    f"Unknown interactive command '{command}'. Run /help."
                 )
         return False, session
 
@@ -584,7 +672,7 @@ class PromptToolkitInteractiveShell:
             ),
         )
         if selected is None:
-            self._terminal.write("Final verification deferred.\n")
+            self._write_warning("Final verification deferred.")
             return
         arguments = (
             ("refactor", "automated") if selected == "automated" else ("refactor",)
@@ -598,6 +686,11 @@ class PromptToolkitInteractiveShell:
         session: ChatSession,
         arguments: Sequence[str],
     ) -> bool:
+        before = (
+            self._diffs.snapshot()
+            if self._diffs is not None and _captures_code_diff(arguments)
+            else None
+        )
         executor = self._command_executor or (
             lambda command: _default_execute(
                 root,
@@ -608,7 +701,7 @@ class PromptToolkitInteractiveShell:
         try:
             result = executor(arguments)
         except KeyboardInterrupt:
-            self._terminal.write("Execution cancelled.\n")
+            self._write_warning("Execution cancelled.")
             store.append_message(
                 session.session_id,
                 "event",
@@ -617,7 +710,16 @@ class PromptToolkitInteractiveShell:
             return False
         visible = result.stdout if result.exit_code == 0 else result.stderr
         if visible:
-            self._terminal.write(visible)
+            rendered = (
+                self._theme.markdown(visible.rstrip())
+                if result.exit_code == 0
+                else self._theme.error(visible.rstrip())
+            )
+            self._terminal.write(rendered + "\n")
+        if result.exit_code == 0 and before is not None:
+            self._show_changed_diff(before)
+        if result.exit_code == 0:
+            self._update_footer(root, session)
         event = f"Workflow command completed ({arguments[0]}; exit {result.exit_code})."
         store.append_message(session.session_id, "event", event)
         return result.exit_code == 0
@@ -632,6 +734,7 @@ class PromptToolkitInteractiveShell:
             return SubprocessRunner()
         return ProviderStreamingRunner(
             config,
+            root,
             SystemStreamingProcessRunner(),
             lambda event: self._render_stream_event(root, event),
         )
@@ -639,7 +742,62 @@ class PromptToolkitInteractiveShell:
     def _render_stream_event(self, root: Path, event: ProviderEvent) -> None:
         rendered = render_provider_event(root, event, self._verbose)
         if rendered:
-            self._terminal.write(rendered)
+            value = rendered.rstrip()
+            if event.kind == "error":
+                value = self._theme.error(value)
+            elif event.kind == "tool_output":
+                value = self._theme.markdown(value)
+            elif event.kind == "tool_finished" and event.exit_code == 0:
+                value = self._theme.success(value)
+            elif event.kind in {"tool_started", "progress"}:
+                value = self._theme.secondary(value)
+            else:
+                value = self._theme.muted(value)
+            self._terminal.write(value + "\n")
+
+    def _write_error(self, message: str) -> None:
+        self._terminal.write(self._theme.error(f"Error: {message}") + "\n")
+
+    def _write_warning(self, message: str) -> None:
+        self._terminal.write(self._theme.warning(message) + "\n")
+
+    def _show_current_diff(self) -> None:
+        if self._diffs is None:
+            self._write_warning("No code changes.")
+            return
+        sections = tuple(content for _, content in self._diffs.snapshot().sections)
+        if not sections:
+            self._write_warning("No code changes.")
+            return
+        self._render_diffs("Current code changes", sections)
+
+    def _show_changed_diff(self, before: WorkspaceDiffSnapshot) -> None:
+        if self._diffs is None:
+            return
+        sections = self._diffs.snapshot().changed_since(before)
+        if sections:
+            self._render_diffs("Code changes", sections)
+
+    def _render_diffs(
+        self,
+        title: str,
+        sections: Tuple[str, ...],
+    ) -> None:
+        self._terminal.write(self._theme.accent(title) + "\n")
+        for section in sections:
+            self._terminal.write(self._theme.diff(section.rstrip()) + "\n")
+
+    def _update_footer(self, root: Path, session: ChatSession) -> None:
+        set_footer = getattr(self._terminal, "set_footer", None)
+        if not callable(set_footer):
+            return
+        status = load_project_status(root)
+        providers = load_provider_roles_status(root)
+        set_footer(
+            f"{root.resolve()} · {status.session_state or 'none'} · "
+            f"{session.name} · code:{providers.code_provider} · "
+            f"test:{providers.test_provider}"
+        )
 
 
 class _TerminalWriter(io.TextIOBase):
@@ -780,6 +938,11 @@ def _automatic_arguments(state: Optional[str]) -> Optional[Tuple[str, ...]]:
     }.get(state)
 
 
+def _captures_code_diff(arguments: Sequence[str]) -> bool:
+    command = tuple(arguments)
+    return command == ("continue",) or command == ("refactor", "automated")
+
+
 def _interactive_help() -> str:
     return (
         "Commands:\n"
@@ -789,13 +952,30 @@ def _interactive_help() -> str:
         "  /approve                Approve the current review\n"
         "  /reject <reason>         Reject the current review\n"
         "  /copy                    Copy the latest Agent reply\n"
+        "  /diff                    Show current code changes\n"
         "  /skills                  Select a project or user Skill\n"
         "  /skill-name              Activate a Skill by name\n"
         "  /verbose                 Toggle expanded Provider events\n"
         "  /status                  Show project status\n"
         "  /new                     Start a new chat\n"
+        "  /clear                   Start a clean chat\n"
         "  /resume [id|name]        Resume a chat\n"
         "  /rename <name>           Rename this chat\n"
+        "  /name <name>             Rename this chat (Pi alias)\n"
+        "  /hotkeys                 Show keyboard shortcuts\n"
         "  /help                    Show commands\n"
-        "  /exit                    Exit\n"
+        "  /exit, /quit             Exit\n"
+    )
+
+
+def _hotkeys_help() -> str:
+    return (
+        "Keyboard shortcuts:\n"
+        "  Enter                    Send\n"
+        "  Shift+Enter              Insert a newline\n"
+        "  Tab                      Select the first completion\n"
+        "  Up/Down                  History or completion navigation\n"
+        "  Ctrl+C                   Clear/cancel; press twice to exit\n"
+        "  Ctrl+D                   Exit when the editor is empty\n"
+        "  @                        Open project file search\n"
     )

@@ -1,7 +1,9 @@
+import re
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Iterable, Optional, Tuple
 
-from prompt_toolkit.completion import Completer, Completion
+from prompt_toolkit.completion import CompleteEvent, Completer, Completion
 from prompt_toolkit.document import Document
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.key_binding.key_processor import KeyPressEvent
@@ -15,12 +17,17 @@ LONG_PASTE_CHARACTERS = 10_000
 INTERACTIVE_COMMANDS = (
     "/approve",
     "/bug",
+    "/clear",
     "/continue",
     "/copy",
+    "/diff",
     "/exit",
     "/feature",
     "/help",
+    "/hotkeys",
+    "/name",
     "/new",
+    "/quit",
     "/reject",
     "/rename",
     "/resume",
@@ -28,6 +35,8 @@ INTERACTIVE_COMMANDS = (
     "/status",
     "/verbose",
 )
+AT_PREFIX_PATTERN = re.compile(r'(?<!\S)@(?:"[^"\r\n]*|[^\s]*)$')
+MAX_COMPLETIONS = 20
 
 
 class WorkspaceCompleter(Completer):
@@ -45,18 +54,26 @@ class WorkspaceCompleter(Completer):
     ) -> Iterable[Completion]:
         """Yield deterministic matches for the token before the cursor."""
         del complete_event
-        token = document.text_before_cursor.rsplit(maxsplit=1)[-1]
-        if token.startswith("@"):
-            fragment = token[1:]
+        at_prefix = _at_prefix(document.text_before_cursor)
+        if at_prefix is not None:
+            fragment, replacement = at_prefix
             try:
                 if self._path_values is None:
                     self._path_values = self._paths.paths()
             except ValueError:
                 return
-            for path in self._path_values:
-                if path.startswith(fragment):
-                    yield Completion(path, start_position=-len(fragment))
+            for path in _ranked_paths(self._path_values, fragment):
+                is_directory = path.endswith("/")
+                name = PurePosixPath(path.rstrip("/")).name
+                completion = f'"{path}"' if " " in path else path
+                yield Completion(
+                    completion,
+                    start_position=-len(replacement),
+                    display=f"{name}/" if is_directory else name,
+                    display_meta=("directory" if is_directory else f"file · {path}"),
+                )
             return
+        token = document.text_before_cursor.rsplit(maxsplit=1)[-1]
         if token.startswith("/") and not document.text_before_cursor.lstrip().count(
             " "
         ):
@@ -65,6 +82,64 @@ class WorkspaceCompleter(Completer):
             for command in sorted(commands):
                 if command.startswith(token):
                     yield Completion(command, start_position=-len(token))
+
+
+def _at_prefix(value: str) -> Optional[Tuple[str, str]]:
+    match = AT_PREFIX_PATTERN.search(value)
+    if match is None:
+        return None
+    replacement = match.group()[1:]
+    fragment = replacement[1:] if replacement.startswith('"') else replacement
+    return fragment.casefold(), replacement
+
+
+def _ranked_paths(
+    paths: Tuple[str, ...],
+    query: str,
+) -> Tuple[str, ...]:
+    ranked = []
+    for path in paths:
+        score = _path_score(path, query)
+        if score is None:
+            continue
+        ranked.append(
+            (
+                -score,
+                0 if path.endswith("/") else 1,
+                path.count("/"),
+                path.casefold(),
+                path,
+            )
+        )
+    ranked.sort()
+    return tuple(item[-1] for item in ranked[:MAX_COMPLETIONS])
+
+
+def _path_score(path: str, query: str) -> Optional[int]:
+    if not query:
+        return 1
+    candidate = path.casefold()
+    name = PurePosixPath(path.rstrip("/")).name.casefold()
+    if name == query:
+        return 1_000
+    if name.startswith(query):
+        return 900
+    if query in name:
+        return 700 - name.index(query)
+    if candidate.startswith(query):
+        return 600
+    if query in candidate:
+        return 500 - candidate.index(query)
+    position = -1
+    gaps = 0
+    for character in query:
+        next_position = candidate.find(character, position + 1)
+        if next_position < 0:
+            return None
+        if position >= 0:
+            gaps += next_position - position - 1
+        position = next_position
+    return max(1, 300 - gaps)
 
 
 class PasteStore:
@@ -97,6 +172,28 @@ def composer_bindings(pastes: PasteStore) -> KeyBindings:
     """Build multiline and long-paste bindings for one PromptSession."""
     bindings = KeyBindings()
 
+    @bindings.add("@", eager=True)
+    def _open_files(event: KeyPressEvent) -> None:
+        buffer = event.current_buffer
+        buffer.insert_text("@")
+        buffer.start_completion(select_first=False)
+
+    @bindings.add("tab", eager=True)
+    def _select_completion(event: KeyPressEvent) -> None:
+        buffer = event.current_buffer
+        if buffer.complete_state is not None:
+            buffer.complete_next()
+            return
+        if buffer.completer is None:
+            return
+        completions = buffer.completer.get_completions(
+            buffer.document,
+            CompleteEvent(completion_requested=True),
+        )
+        first = next(iter(completions), None)
+        if first is not None:
+            buffer.apply_completion(first)
+
     @bindings.add("enter")
     def _enter(event: KeyPressEvent) -> None:
         buffer = event.current_buffer
@@ -108,6 +205,10 @@ def composer_bindings(pastes: PasteStore) -> KeyBindings:
 
     @bindings.add("escape", "enter")
     def _shift_enter(event: KeyPressEvent) -> None:
+        event.current_buffer.insert_text("\n")
+
+    @bindings.add("c-j")
+    def _ctrl_j(event: KeyPressEvent) -> None:
         event.current_buffer.insert_text("\n")
 
     @bindings.add(Keys.BracketedPaste, eager=True)

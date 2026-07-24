@@ -54,6 +54,20 @@ def test_should_reject_attachment_changed_before_send(tmp_path: Path) -> None:
         attachments.verify(snapshot)
 
 
+def test_should_capture_quoted_attachment_path_with_spaces(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source files"
+    source.mkdir()
+    (source / "app.py").write_text("pass\n", encoding="utf-8")
+
+    snapshots = WorkspaceAttachments(tmp_path).capture_from_text(
+        'Review @"source files/app.py"'
+    )
+
+    assert [snapshot.path for snapshot in snapshots] == ["source files/app.py"]
+
+
 def test_should_exclude_non_git_dependency_and_agent_directories(
     tmp_path: Path,
 ) -> None:

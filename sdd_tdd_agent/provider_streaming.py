@@ -119,10 +119,12 @@ class ProviderStreamingRunner(ProcessRunner):
     def __init__(
         self,
         config: CommandAnalyzerConfig,
+        workspace: Path,
         delegate: StreamingProcessRunner,
         event_sink: Callable[[ProviderEvent], None],
     ) -> None:
         self._config = config
+        self._workspace = workspace.resolve()
         self._delegate = delegate
         self._event_sink = event_sink
 
@@ -167,14 +169,14 @@ class ProviderStreamingRunner(ProcessRunner):
             on_line,
         )
         if result.returncode != 0:
-            self._event_sink(
-                ProviderEvent(
-                    "error",
-                    text=f"Provider exited with code {result.returncode}",
-                    exit_code=result.returncode,
+            raise RequirementAnalyzerError(
+                _provider_failure(
+                    self._workspace,
+                    self._config.protocol,
+                    result.returncode,
+                    result.stderr,
                 )
             )
-            return ProcessResult(result.returncode, "", "")
         if self._config.protocol == "codex-exec":
             return result
         if self._config.protocol in {"claude-exec", "cursor-exec"}:
@@ -454,3 +456,55 @@ def _error_text(payload: Dict[str, object]) -> str:
 
 def _optional_string(value: object) -> Optional[str]:
     return value if isinstance(value, str) and value else None
+
+
+def _provider_failure(
+    workspace: Path,
+    protocol: str,
+    returncode: int,
+    stderr: str,
+) -> str:
+    provider = {
+        "codex-exec": "Codex",
+        "claude-exec": "Claude Code",
+        "cursor-exec": "Cursor",
+        "pi-exec": "Pi",
+    }[protocol]
+    provider_key = {
+        "codex-exec": "codex",
+        "claude-exec": "claude-code",
+        "cursor-exec": "cursor",
+        "pi-exec": "pi",
+    }[protocol]
+    sanitized = sanitize_public_text(workspace, stderr).replace(
+        str(Path.home()),
+        "~",
+    )
+    lowered = sanitized.casefold()
+    doctor = f"Run 'wssagent provider doctor {provider_key}' after fixing it."
+    if any(
+        marker in lowered
+        for marker in (
+            "operation not permitted",
+            "permission denied",
+            "readonly database",
+            "read-only database",
+        )
+    ):
+        return (
+            f"{provider} could not access its user data "
+            f"(exit {returncode}). Check CLI file permissions. {doctor}"
+        )
+    if any(
+        marker in lowered
+        for marker in ("authentication", "not logged in", "unauthorized")
+    ):
+        return (
+            f"{provider} authentication failed (exit {returncode}). "
+            f"Sign in with the Provider CLI. {doctor}"
+        )
+    detail = next(
+        (line.strip() for line in reversed(sanitized.splitlines()) if line.strip()),
+        "No diagnostic output was returned",
+    )[:500]
+    return f"{provider} failed (exit {returncode}): {detail}. {doctor}"

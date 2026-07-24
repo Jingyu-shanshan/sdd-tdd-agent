@@ -150,9 +150,15 @@ def test_should_reject_malformed_known_event(
 
 
 class FakeStreamingProcess:
-    def __init__(self, lines: List[str], returncode: int = 0) -> None:
+    def __init__(
+        self,
+        lines: List[str],
+        returncode: int = 0,
+        stderr: str = "",
+    ) -> None:
         self.lines = lines
         self.returncode = returncode
+        self.stderr = stderr
         self.command: Tuple[str, ...] = ()
         self.stdin = ""
 
@@ -167,7 +173,11 @@ class FakeStreamingProcess:
         self.stdin = stdin
         for line in self.lines:
             on_stdout_line(line)
-        return ProcessResult(self.returncode, "\n".join(self.lines), "")
+        return ProcessResult(
+            self.returncode,
+            "\n".join(self.lines),
+            self.stderr,
+        )
 
 
 def test_should_stream_claude_and_return_only_terminal_result() -> None:
@@ -187,6 +197,7 @@ def test_should_stream_claude_and_return_only_terminal_result() -> None:
     events: List[ProviderEvent] = []
     runner = ProviderStreamingRunner(
         CommandAnalyzerConfig(("claude",), 30, "claude-exec"),
+        Path.cwd(),
         process,
         events.append,
     )
@@ -217,6 +228,7 @@ def test_should_enable_codex_jsonl_without_changing_terminal_output() -> None:
     process = FakeStreamingProcess([])
     runner = ProviderStreamingRunner(
         CommandAnalyzerConfig(("codex",), 30, "codex-exec"),
+        Path.cwd(),
         process,
         lambda event: None,
     )
@@ -248,6 +260,7 @@ def test_should_use_pi_rpc_and_return_final_assistant_text() -> None:
     )
     runner = ProviderStreamingRunner(
         CommandAnalyzerConfig(("pi",), 30, "pi-exec"),
+        Path.cwd(),
         process,
         lambda event: None,
     )
@@ -260,9 +273,9 @@ def test_should_use_pi_rpc_and_return_final_assistant_text() -> None:
 
 
 def test_should_fail_when_stream_has_no_terminal_result(tmp_path: Path) -> None:
-    del tmp_path
     runner = ProviderStreamingRunner(
         CommandAnalyzerConfig(("cursor-agent",), 30, "cursor-exec"),
+        tmp_path,
         FakeStreamingProcess([json.dumps({"type": "system", "subtype": "init"})]),
         lambda event: None,
     )
@@ -285,26 +298,29 @@ def test_should_fail_when_stream_has_no_terminal_result(tmp_path: Path) -> None:
     ],
 )
 def test_should_report_nonzero_provider_exit(
+    tmp_path: Path,
     protocol: str,
     command: Tuple[str, ...],
 ) -> None:
     events: List[ProviderEvent] = []
     runner = ProviderStreamingRunner(
         CommandAnalyzerConfig((command[0],), 30, protocol),
-        FakeStreamingProcess([], returncode=7),
+        tmp_path,
+        FakeStreamingProcess(
+            [],
+            returncode=7,
+            stderr=(f"failed at {tmp_path}: attempt to write a readonly database\n"),
+        ),
         events.append,
     )
 
-    result = runner.run(command, "{}", 30)
+    with pytest.raises(
+        RequirementAnalyzerError,
+        match=("could not access its user data.*wssagent provider doctor"),
+    ):
+        runner.run(command, "{}", 30)
 
-    assert result == ProcessResult(7, "", "")
-    assert events == [
-        ProviderEvent(
-            "error",
-            text="Provider exited with code 7",
-            exit_code=7,
-        )
-    ]
+    assert events == []
 
 
 def test_should_render_only_sanitized_public_stream_content(

@@ -33,7 +33,7 @@ EXCLUDED_DIRECTORIES = {
     "node_modules",
     "venv",
 }
-ATTACHMENT_PATTERN = re.compile(r"(?<!\S)@([^\s]+)")
+ATTACHMENT_PATTERN = re.compile(r'(?<!\S)@(?:"([^"\r\n]+)"|([^\s]+))')
 GIT_FILES_COMMAND = (
     "git",
     "ls-files",
@@ -118,7 +118,11 @@ class WorkspaceAttachments:
 
     def capture_from_text(self, value: str) -> Tuple[AttachmentSnapshot, ...]:
         """Capture each unique @path referenced by one composer submission."""
-        references = tuple(dict.fromkeys(ATTACHMENT_PATTERN.findall(value)))
+        references = tuple(
+            dict.fromkeys(
+                quoted or plain for quoted, plain in ATTACHMENT_PATTERN.findall(value)
+            )
+        )
         if len(references) > MAX_ATTACHMENTS:
             raise ValueError("Too many attachments")
         snapshots = tuple(self.capture(reference) for reference in references)
