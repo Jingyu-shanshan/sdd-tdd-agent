@@ -561,11 +561,15 @@ uv run wssagent provider doctor codex
 Select an implemented Provider explicitly:
 
 ```bash
+uv run wssagent init
 uv run wssagent provider use codex
 uv run wssagent provider use claude-code
 uv run wssagent provider use cursor
 uv run wssagent provider use pi
 ```
+
+Provider selection is project-local and therefore requires an initialized
+`.agent/config.yml` in the current project root.
 
 The default Provider is used for every model operation unless a source-writing
 role overrides it. Select and inspect those overrides with:

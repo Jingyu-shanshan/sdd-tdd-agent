@@ -61,7 +61,14 @@ def load_analyzer_config(root: Path) -> CommandAnalyzerConfig:
     in_command = False
     protocol = "json-command"
 
-    for line in path.read_text(encoding="utf-8").splitlines():
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError as error:
+        raise AnalyzerConfigurationError(
+            "Project is not initialized; run 'wssagent init' in the project root"
+        ) from error
+
+    for line in lines:
         value = line.strip()
         if not value or value.startswith("#"):
             continue

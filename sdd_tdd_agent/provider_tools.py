@@ -4,14 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Protocol, TextIO, Tuple
 
-from sdd_tdd_agent.analyze_command import load_analyzer_config
 from sdd_tdd_agent.model_adapter import ProcessRunner
 from sdd_tdd_agent.provider_registry import (
     ProviderInstallPlan,
     ProviderSelection,
     get_provider,
-    load_provider_config,
+    load_provider_selection_config,
     select_provider,
+    validate_provider_role,
     validate_provider_selection,
 )
 
@@ -224,9 +224,9 @@ def use_provider(
     if provider.command is None:
         raise ProviderInstallError("Provider adapter command is unavailable")
     executable_name = provider.command[0]
-    config = load_analyzer_config(root)
+    config = load_provider_selection_config(root)
     if role is not None:
-        load_provider_config(root, role)
+        validate_provider_role(root, role)
     if not dependencies.input.isatty():
         selection = select_provider(root, provider.key, role)
         return ProviderUseResult(selection, None, False)
