@@ -102,7 +102,7 @@ def test_should_install_verify_and_select_after_confirmation(tmp_path: Path) -> 
         "Provider CLI 'codex' was not found. Install the current stable CLI "
         "from the official source? [y/N] "
         "Installed provider CLI: codex (codex-cli 2.0.0)\n"
-        "Selected provider: codex\n"
+        "Selected provider for code: codex\n"
     )
     assert error == ""
     assert [command[0] for command in runner.commands] == [
@@ -173,7 +173,7 @@ def test_should_never_install_during_non_interactive_selection(
     )
 
     assert exit_code == 0
-    assert output == "Selected provider: codex\n"
+    assert output == "Selected provider for code: codex\n"
     assert error == ""
     assert runner.commands == []
     assert "requirement_analyzer_protocol: codex-exec" in config_path.read_text(

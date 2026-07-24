@@ -46,6 +46,15 @@ class ProviderSelection:
     role: Optional[str] = None
 
 
+@dataclass(frozen=True)
+class ProviderRolesStatus:
+    """Configured public Provider roles for one project."""
+
+    code_provider: Optional[str]
+    test_provider: Optional[str]
+    test_inherited: bool
+
+
 class ProviderSelectionError(ValueError):
     """Safe error raised when a provider cannot be selected."""
 
@@ -148,14 +157,10 @@ def load_provider_selection(
     role: Optional[str] = None,
 ) -> ProviderSelection:
     """Load the selected provider without executing or resolving its command."""
-    config = load_provider_config(root, role) if role else load_analyzer_config(root)
-    provider_keys = {
-        "codex-exec": "codex",
-        "claude-exec": "claude-code",
-        "cursor-exec": "cursor",
-        "pi-exec": "pi",
-    }
-    provider_key = provider_keys.get(config.protocol, "custom-json")
+    config = (
+        load_provider_config(root, role) if role else load_primary_provider_config(root)
+    )
+    provider_key = _provider_key_for_protocol(config.protocol)
     provider = next(item for item in PROVIDERS if item.key == provider_key)
     return ProviderSelection(
         provider_key=provider.key,
@@ -166,6 +171,15 @@ def load_provider_selection(
     )
 
 
+def _provider_key_for_protocol(protocol: str) -> str:
+    return {
+        "codex-exec": "codex",
+        "claude-exec": "claude-code",
+        "cursor-exec": "cursor",
+        "pi-exec": "pi",
+    }.get(protocol, "custom-json")
+
+
 def render_provider_status(selection: ProviderSelection) -> str:
     """Render deterministic selected-provider configuration status."""
     return (
@@ -174,6 +188,32 @@ def render_provider_status(selection: ProviderSelection) -> str:
         f"Protocol: {selection.protocol}\n"
         f"Timeout seconds: {selection.timeout_seconds:g}\n"
     )
+
+
+def load_provider_roles_status(root: Path) -> ProviderRolesStatus:
+    """Load public Provider roles without mutating project configuration."""
+    fallback = load_provider_selection_config(root)
+    content = (root / ".agent" / "config.yml").read_text(encoding="utf-8")
+    code = _load_role_provider(root, "production-source")
+    if code is None and _has_analyzer_config(content.splitlines()):
+        code_key: Optional[str] = _provider_key_for_protocol(fallback.protocol)
+    else:
+        code_key = code.key if code is not None else None
+    test = _load_role_provider(root, "test-source")
+    test_key = test.key if test is not None else code_key
+    return ProviderRolesStatus(
+        code_provider=code_key,
+        test_provider=test_key,
+        test_inherited=test is None and test_key is not None,
+    )
+
+
+def render_provider_roles_status(status: ProviderRolesStatus) -> str:
+    """Render the two public Provider roles."""
+    code = status.code_provider or "not configured"
+    test = status.test_provider or "not configured"
+    inherited = " (inherited)" if status.test_inherited else ""
+    return f"Code provider: {code}\nTest provider: {test}{inherited}\n"
 
 
 def _find_provider(provider_key: str) -> ProviderDefinition:
@@ -215,11 +255,14 @@ def _load_role_provider(root: Path, role: str) -> Optional[ProviderDefinition]:
 
 
 def load_provider_config(root: Path, role: str) -> CommandAnalyzerConfig:
-    """Load a role-specific provider config, falling back to the default."""
-    default = load_analyzer_config(root)
+    """Load a public role, with test inheriting the primary code Provider."""
+    _provider_role_key(role)
+    if role == "production-source":
+        return load_primary_provider_config(root)
     provider = _load_role_provider(root, role)
     if provider is None:
-        return default
+        return load_primary_provider_config(root)
+    default = load_provider_selection_config(root)
     if provider.command is None or provider.protocol is None:
         raise ProviderSelectionError(f"Provider is not configured: {provider.key}")
     return CommandAnalyzerConfig(
@@ -227,6 +270,27 @@ def load_provider_config(root: Path, role: str) -> CommandAnalyzerConfig:
         default.timeout_seconds,
         provider.protocol,
     )
+
+
+def load_primary_provider_config(root: Path) -> CommandAnalyzerConfig:
+    """Load the code Provider, falling back only to explicit legacy config."""
+    fallback = load_provider_selection_config(root)
+    provider = _load_role_provider(root, "production-source")
+    if provider is not None:
+        if provider.command is None or provider.protocol is None:
+            raise ProviderSelectionError(f"Provider is not configured: {provider.key}")
+        return CommandAnalyzerConfig(
+            provider.command,
+            fallback.timeout_seconds,
+            provider.protocol,
+        )
+    content = (root / ".agent" / "config.yml").read_text(encoding="utf-8")
+    if not _has_analyzer_config(content.splitlines()):
+        raise AnalyzerConfigurationError(
+            "Code provider is not configured; run "
+            "'wssagent provider use <provider> --for code'"
+        )
+    return fallback
 
 
 def validate_provider_role(root: Path, role: str) -> None:
@@ -352,9 +416,13 @@ def select_provider(
     content = config_path.read_text(encoding="utf-8")
     if role is None:
         updated = _provider_config(content, provider)
+    elif role == "production-source":
+        updated = _provider_role_config(
+            _provider_config(content, provider),
+            provider,
+            role,
+        )
     else:
-        if not _has_analyzer_config(content.splitlines()):
-            content = _provider_config(content, _find_provider("codex"))
         updated = _provider_role_config(content, provider, role)
     temporary = config_path.with_name(".config.yml.provider.tmp")
     temporary.write_text(updated, encoding="utf-8")

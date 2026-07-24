@@ -48,11 +48,7 @@ def test_should_report_incomplete_analyzer_config_without_traceback(
 
     assert exit_code == 2
     assert output.getvalue() == ""
-    assert errors.getvalue() == (
-        "Error: Analyzer configuration is incomplete; add "
-        "requirement_analyzer_command and requirement_analyzer_timeout_seconds "
-        "to .agent/config.yml\n"
-    )
+    assert errors.getvalue().startswith("Error: Code provider is not configured")
     assert json.loads((session / "state.json").read_text(encoding="utf-8")) == {
         "state": "ANALYSIS"
     }

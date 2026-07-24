@@ -7,6 +7,7 @@ from sdd_tdd_agent.cli import main
 from sdd_tdd_agent.provider_registry import (
     ProviderSelectionError,
     load_provider_config,
+    load_provider_selection,
     select_provider,
 )
 
@@ -52,9 +53,11 @@ def test_should_select_provider_for_source_role(
     assert config.protocol == expected_protocol
     assert config.command == expected_command
     assert config.timeout_seconds == 45
-    assert "requirement_analyzer_protocol: codex-exec" in config_path.read_text(
-        encoding="utf-8"
+    content = config_path.read_text(encoding="utf-8")
+    primary_protocol = (
+        expected_protocol if role == "production-source" else "codex-exec"
     )
+    assert f"requirement_analyzer_protocol: {primary_protocol}" in content
 
 
 def test_should_fall_back_to_default_provider_for_unconfigured_role(
@@ -111,6 +114,20 @@ def test_should_report_role_provider_through_cli(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert output.getvalue().startswith("Selected provider: claude-code\n")
+
+
+def test_should_use_code_provider_as_primary_provider(tmp_path: Path) -> None:
+    config_path = _write_config(tmp_path)
+
+    select_provider(tmp_path, "cursor", "production-source")
+
+    config = load_provider_config(tmp_path, "production-source")
+    selection = load_provider_selection(tmp_path)
+    content = config_path.read_text(encoding="utf-8")
+    assert config.protocol == "cursor-exec"
+    assert selection.provider_key == "cursor"
+    assert "requirement_analyzer_protocol: cursor-exec" in content
+    assert 'requirement_analyzer_command:\n  - "cursor-agent"' in content
 
 
 def test_should_reject_unknown_provider_role_without_modifying_config(

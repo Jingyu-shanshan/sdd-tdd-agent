@@ -4,7 +4,6 @@ from typing import Optional, Sequence, TextIO
 
 from sdd_tdd_agent.analyze_command import (
     analyze_active_requirement,
-    load_analyzer_config,
 )
 from sdd_tdd_agent.change_approval import (
     ChangeApprovalError,
@@ -127,8 +126,11 @@ from sdd_tdd_agent.refactor_completion import (
 from sdd_tdd_agent.test_source_workspace import TestSourceWorkspaceError
 from sdd_tdd_agent.provider_registry import (
     list_providers,
+    load_primary_provider_config,
+    load_provider_roles_status,
     load_provider_selection,
     render_provider_list,
+    render_provider_roles_status,
     render_provider_status,
 )
 from sdd_tdd_agent.provider_tools import (
@@ -418,7 +420,7 @@ def main(
             test_runner or SystemTestCommandRunner(),
         )
         try:
-            config = load_analyzer_config(project_root)
+            config = load_primary_provider_config(project_root)
             generator = (
                 CodexExecAutomatedRefactorGenerator(
                     config,
@@ -672,14 +674,24 @@ def main(
         output.write(render_provider_list(list_providers()))
         return 0
 
-    if arguments == ["provider", "status"] or (
-        len(arguments) == 4 and arguments[0:3] == ["provider", "status", "--for"]
-    ):
+    if arguments == ["provider", "status"]:
         try:
-            requested_role = arguments[3] if len(arguments) == 4 else None
+            status = load_provider_roles_status(project_root)
+        except ValueError as error:
+            error_output.write(f"Error: {error}\n")
+            return 2
+        output.write(render_provider_roles_status(status))
+        return 0
+
+    if len(arguments) == 4 and arguments[0:3] == [
+        "provider",
+        "status",
+        "--for",
+    ]:
+        try:
             selection = load_provider_selection(
                 project_root,
-                _provider_role(requested_role),
+                _provider_role(arguments[3]),
             )
         except ValueError as error:
             error_output.write(f"Error: {error}\n")
@@ -689,7 +701,7 @@ def main(
 
     if len(arguments) in {2, 3} and arguments[0:2] == ["provider", "doctor"]:
         try:
-            config = load_analyzer_config(project_root)
+            config = load_primary_provider_config(project_root)
             provider_key = (
                 arguments[2]
                 if len(arguments) == 3
@@ -715,7 +727,7 @@ def main(
         try:
             if len(arguments) == 5 and arguments[3] != "--for":
                 raise ValueError("Expected --for before provider role")
-            requested_role = arguments[4] if len(arguments) == 5 else None
+            requested_role = arguments[4] if len(arguments) == 5 else "code"
             dependencies = provider_dependencies or ProviderCommandDependencies(
                 input=sys.stdin,
                 runner=runner or SubprocessRunner(),

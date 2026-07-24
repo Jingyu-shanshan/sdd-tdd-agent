@@ -131,10 +131,12 @@ def analyze_active_requirement(
     runner: ProcessRunner,
 ) -> RequirementAnalysisRun:
     """Run configured requirement analysis for the active project Session."""
+    from sdd_tdd_agent.provider_registry import load_primary_provider_config
+
     status = load_project_status(root)
     if status.current_session is None:
         raise ActiveSessionError("Project has no active Session")
-    config = load_analyzer_config(root)
+    config = load_primary_provider_config(root)
     if config.protocol == "codex-exec":
         analyzer = CodexExecRequirementAnalyzer(
             config=config,

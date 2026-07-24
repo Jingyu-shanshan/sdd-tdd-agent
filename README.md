@@ -584,8 +584,9 @@ uv run wssagent provider use pi
 Provider selection is project-local and therefore requires an initialized
 `.agent/config.yml` in the current project root.
 
-The default Provider is used for every model operation unless a specialized
-role overrides it. Select and inspect those overrides with:
+The `code` Provider handles planning, review, and implementation. The `test`
+Provider writes tests and inherits `code` when an older project has no explicit
+test selection. Select and inspect both roles with:
 
 ```bash
 uv run wssagent provider use claude-code --for test
@@ -596,7 +597,7 @@ uv run wssagent provider status --for code
 
 `test` writes planned test files; `code` writes the Blind
 implementation after RED. Test execution itself still uses the detected local
-project test command. An unconfigured role falls back to the default Provider.
+project test command. Provider status never invents an implicit selection.
 
 When an adapter-ready CLI is missing in an interactive terminal, `provider use`
 asks before downloading anything. The default is always No. Confirmation

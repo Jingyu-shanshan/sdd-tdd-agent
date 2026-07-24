@@ -5,6 +5,7 @@ from sdd_tdd_agent.cli import main
 from sdd_tdd_agent.provider_registry import (
     load_provider_selection,
     render_provider_status,
+    select_provider,
 )
 
 
@@ -60,11 +61,17 @@ def test_should_report_selected_provider_through_cli(tmp_path: Path) -> None:
 
     assert exit_code == 0
     assert (
-        output.getvalue()
-        == """\
-Selected provider: codex
-Adapter status: adapter-ready
-Protocol: codex-exec
-Timeout seconds: 300
-"""
+        output.getvalue() == "Code provider: codex\nTest provider: codex (inherited)\n"
     )
+
+
+def test_should_report_explicit_code_and_test_providers(tmp_path: Path) -> None:
+    _write_config(tmp_path)
+    select_provider(tmp_path, "cursor", "production-source")
+    select_provider(tmp_path, "claude-code", "test-source")
+    output = io.StringIO()
+
+    exit_code = main(["provider", "status"], out=output, root=tmp_path)
+
+    assert exit_code == 0
+    assert output.getvalue() == ("Code provider: cursor\nTest provider: claude-code\n")

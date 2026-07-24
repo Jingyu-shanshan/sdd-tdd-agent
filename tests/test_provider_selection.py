@@ -106,7 +106,7 @@ def test_should_select_provider_through_cli(tmp_path: Path) -> None:
     )
 
     assert exit_code == 0
-    assert output.getvalue() == "Selected provider: codex\n"
+    assert output.getvalue() == "Selected provider for code: codex\n"
     assert error_output.getvalue() == ""
     assert "requirement_analyzer_protocol: codex-exec" in config_path.read_text(
         encoding="utf-8"
@@ -126,7 +126,7 @@ def test_should_select_cursor_through_cli(tmp_path: Path) -> None:
     )
 
     assert exit_code == 0
-    assert output.getvalue() == "Selected provider: cursor\n"
+    assert output.getvalue() == "Selected provider for code: cursor\n"
     assert error_output.getvalue() == ""
     assert "requirement_analyzer_protocol: cursor-exec" in config_path.read_text(
         encoding="utf-8"

@@ -1,10 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from sdd_tdd_agent.analyze_command import (
-    ActiveSessionError,
-    load_analyzer_config,
-)
+from sdd_tdd_agent.analyze_command import ActiveSessionError
 from sdd_tdd_agent.design_adapter import (
     CodexExecDesignGenerator,
     JsonCommandDesignGenerator,
@@ -19,6 +16,7 @@ from sdd_tdd_agent.model_adapter import (
     structured_cli_runner,
 )
 from sdd_tdd_agent.project_status import load_project_status
+from sdd_tdd_agent.provider_registry import load_primary_provider_config
 
 
 def generate_active_design(
@@ -30,7 +28,7 @@ def generate_active_design(
     status = load_project_status(root)
     if status.current_session is None:
         raise ActiveSessionError("Project has no active Session")
-    config = load_analyzer_config(root)
+    config = load_primary_provider_config(root)
     if config.protocol == "codex-exec":
         generator = CodexExecDesignGenerator(
             config=config,

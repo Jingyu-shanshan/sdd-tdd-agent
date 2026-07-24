@@ -218,7 +218,7 @@ def test_should_validate_config_before_starting_cycle(tmp_path: Path) -> None:
     (tmp_path / ".agent" / "config.yml").write_text("max_iterations: 20\n")
     before = (session / "state.json").read_text(encoding="utf-8")
 
-    with pytest.raises(ValueError, match="configuration is incomplete"):
+    with pytest.raises(ValueError, match="Code provider is not configured"):
         generate_active_test_source(tmp_path, UnexpectedRunner())
 
     assert (session / "state.json").read_text(encoding="utf-8") == before

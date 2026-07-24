@@ -64,7 +64,6 @@ def test_should_select_role_provider_immediately_after_init(tmp_path: Path) -> N
     assert exit_code == 0
     assert output.getvalue() == "Selected provider for test: claude-code\n"
     assert error_output.getvalue() == ""
-    assert "requirement_analyzer_protocol: codex-exec\n" in config
-    assert 'requirement_analyzer_command:\n  - "codex"\n' in config
-    assert "requirement_analyzer_timeout_seconds: 300\n" in config
+    assert "requirement_analyzer_protocol:" not in config
+    assert "requirement_analyzer_command:" not in config
     assert "test_source_provider: claude-code\n" in config

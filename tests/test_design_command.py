@@ -191,4 +191,4 @@ def test_should_report_design_config_error_without_runner(tmp_path: Path) -> Non
     )
 
     assert exit_code == 2
-    assert errors.getvalue().startswith("Error: Analyzer configuration is incomplete")
+    assert errors.getvalue().startswith("Error: Code provider is not configured")
